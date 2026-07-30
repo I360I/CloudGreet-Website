@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank, PhoneCall, CircleNotch } from '@phosphor-icons/react'
+import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank, PhoneCall, CircleNotch, X } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from './_components/SalesShell'
 import { DecayBanner } from './_components/DecayBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -87,6 +87,22 @@ export default function SalesHome() {
   const [gDial, setGDial] = useState('')
   const [savingGoals, setSavingGoals] = useState(false)
   const [goalErr, setGoalErr] = useState('')
+  // Leads the rep has X'd off today's call list after dialing them.
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+
+  const dismissCall = async (leadId: string) => {
+    setDismissed((prev) => new Set(prev).add(leadId))
+    try {
+      await fetchWithAuth(`/api/sales/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ follow_up_at: null }),
+      })
+    } catch {
+      // Re-show it if the clear failed so it isn't silently lost.
+      setDismissed((prev) => { const n = new Set(prev); n.delete(leadId); return n })
+    }
+  }
 
   const saveGoals = async () => {
     setSavingGoals(true); setGoalErr('')
@@ -184,6 +200,7 @@ export default function SalesHome() {
     seen.add(l.lead_id)
     callList.push({ ...l, reason: 'hot' })
   }
+  const visibleCalls = callList.filter((l) => !dismissed.has(l.lead_id))
 
   // Filter cal bookings to today only - anything tomorrow+ shows in
   // a separate "Upcoming demos" section so today's view stays tight.
@@ -426,7 +443,7 @@ export default function SalesHome() {
                 Today&apos;s calls
               </div>
               <div className="text-sm font-medium text-gray-900">
-                {callList.length === 0 ? 'No follow-ups due' : `${callList.length} to call`}
+                {visibleCalls.length === 0 ? 'No follow-ups due' : `${visibleCalls.length} to call`}
               </div>
             </div>
             <Link
@@ -438,7 +455,7 @@ export default function SalesHome() {
             </Link>
           </div>
 
-          {callList.length === 0 ? (
+          {visibleCalls.length === 0 ? (
             <div className="px-5 py-10 text-center">
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-gray-100 text-gray-400 mb-3">
                 <Coffee weight="duotone" className="w-5 h-5" />
@@ -454,7 +471,7 @@ export default function SalesHome() {
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {callList.slice(0, 12).map((l) => (
+              {visibleCalls.slice(0, 12).map((l) => (
                 <li
                   key={l.lead_id}
                   className="px-5 py-3 flex items-start gap-3 hover:bg-gray-50/60 transition-colors"
@@ -496,6 +513,14 @@ export default function SalesHome() {
                       <Phone weight="bold" className="w-4 h-4" />
                     </a>
                   )}
+                  <button
+                    onClick={() => dismissCall(l.lead_id)}
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                    aria-label="Clear from today's calls"
+                    title="Called - clear from list"
+                  >
+                    <X weight="bold" className="w-4 h-4" />
+                  </button>
                 </li>
               ))}
             </ul>
