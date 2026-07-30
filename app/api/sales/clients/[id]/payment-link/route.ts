@@ -51,20 +51,24 @@ export async function POST(
     return NextResponse.json({ error: 'Setup fee out of range.' }, { status: 400 })
   }
 
-  const email = String(body?.email || (biz as any).email || '').trim().toLowerCase()
-  if (!email) {
-    return NextResponse.json({ error: 'No email on this account. Add one first.' }, { status: 400 })
-  }
+  // We deliberately do NOT lock the payer's email. Whoever actually pays
+  // (an owner, a manager, a corporate AP office - common for restaurant
+  // groups) enters their own email at Stripe checkout for the receipt.
+  // The account is linked to this business by metadata.cloudgreet_business_id,
+  // NOT by email, so a different payer email is fine.
 
   // Optional 1-week free trial: card is collected up front, first charge
   // (and rep commission) lands 7 days later when Stripe bills the sub.
+  // The trial also WAIVES the setup fee - a free trial with an upfront
+  // setup charge isn't really free.
   const freeTrial = body?.free_trial === true
+  const effectiveSetupCents = freeTrial ? 0 : setupCents
 
   // Persist the negotiated price on the business so the rep MRR + cost-margin
   // reflect it once they pay.
   await supabaseAdmin
     .from('businesses')
-    .update({ monthly_price_cents: monthlyCents, setup_fee_cents: setupCents, updated_at: new Date().toISOString() })
+    .update({ monthly_price_cents: monthlyCents, setup_fee_cents: effectiveSetupCents, updated_at: new Date().toISOString() })
     .eq('id', biz.id)
 
   const stripe = getStripeClient()
@@ -81,12 +85,12 @@ export async function POST(
       quantity: 1,
     },
   ]
-  if (setupCents > 0) {
+  if (effectiveSetupCents > 0) {
     lineItems.push({
       price_data: {
         currency: 'usd',
         product_data: { name: 'CloudGreet setup fee (one-time)' },
-        unit_amount: setupCents,
+        unit_amount: effectiveSetupCents,
       },
       quantity: 1,
     })
@@ -96,7 +100,7 @@ export async function POST(
   try {
     session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      customer_email: email,
+      // no customer_email → Stripe prompts the payer for their own email
       line_items: lineItems,
       success_url: `${baseUrl}/payment/success?business=${biz.id}`,
       cancel_url: `${baseUrl}/payment/cancel?business=${biz.id}`,
@@ -112,7 +116,7 @@ export async function POST(
           cloudgreet_business_id: biz.id,
           cloudgreet_rep_id: auth.userId,
           monthly_cents: String(monthlyCents),
-          setup_fee_cents: String(setupCents),
+          setup_fee_cents: String(effectiveSetupCents),
           free_trial: String(freeTrial),
         },
       },

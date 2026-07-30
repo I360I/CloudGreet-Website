@@ -577,10 +577,11 @@ function PaymentLinkSection({ businessId }: { businessId: string }) {
                 <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="499" autoFocus
                   className="block mt-1 w-full bg-white border border-gray-300 rounded-lg px-2.5 py-2 text-sm text-gray-900" />
               </label>
-              <label className="text-xs text-gray-600 flex-1">
+              <label className={`text-xs flex-1 ${freeTrial ? 'text-gray-400' : 'text-gray-600'}`}>
                 Setup $ (optional)
-                <input value={setup} onChange={(e) => setSetup(e.target.value)} inputMode="decimal" placeholder="0"
-                  className="block mt-1 w-full bg-white border border-gray-300 rounded-lg px-2.5 py-2 text-sm text-gray-900" />
+                <input value={freeTrial ? '' : setup} onChange={(e) => setSetup(e.target.value)} inputMode="decimal"
+                  placeholder={freeTrial ? 'waived' : '0'} disabled={freeTrial}
+                  className={`block mt-1 w-full border rounded-lg px-2.5 py-2 text-sm ${freeTrial ? 'bg-gray-100 border-gray-200 text-gray-400 line-through placeholder:no-underline' : 'bg-white border-gray-300 text-gray-900'}`} />
               </label>
             </div>
             <label className="mt-3 flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2.5 hover:bg-gray-50 transition-colors">
@@ -588,7 +589,7 @@ function PaymentLinkSection({ businessId }: { businessId: string }) {
                 className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
               <span className="text-sm text-gray-800">
                 Apply 1-week free trial
-                <span className="block text-[11px] text-gray-500">Card collected now, first charge in 7 days.</span>
+                <span className="block text-[11px] text-gray-500">Setup fee waived, card collected now, first charge in 7 days.</span>
               </span>
             </label>
             <button onClick={generate} disabled={busy}
