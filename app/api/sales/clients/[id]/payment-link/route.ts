@@ -57,18 +57,18 @@ export async function POST(
   // The account is linked to this business by metadata.cloudgreet_business_id,
   // NOT by email, so a different payer email is fine.
 
-  // Optional 1-week free trial: card is collected up front, first charge
-  // (and rep commission) lands 7 days later when Stripe bills the sub.
-  // The trial also WAIVES the setup fee - a free trial with an upfront
-  // setup charge isn't really free.
+  // Optional 1-week free trial: card is collected up front, nothing is
+  // charged now. Stripe defers the first invoice - the monthly AND the
+  // one-time setup fee - to trial end, so the setup fee still applies,
+  // it just bills once when the 7 days are up (along with the first
+  // month). Rep commission credits on that first paid invoice.
   const freeTrial = body?.free_trial === true
-  const effectiveSetupCents = freeTrial ? 0 : setupCents
 
   // Persist the negotiated price on the business so the rep MRR + cost-margin
   // reflect it once they pay.
   await supabaseAdmin
     .from('businesses')
-    .update({ monthly_price_cents: monthlyCents, setup_fee_cents: effectiveSetupCents, updated_at: new Date().toISOString() })
+    .update({ monthly_price_cents: monthlyCents, setup_fee_cents: setupCents, updated_at: new Date().toISOString() })
     .eq('id', biz.id)
 
   const stripe = getStripeClient()
@@ -85,12 +85,12 @@ export async function POST(
       quantity: 1,
     },
   ]
-  if (effectiveSetupCents > 0) {
+  if (setupCents > 0) {
     lineItems.push({
       price_data: {
         currency: 'usd',
         product_data: { name: 'CloudGreet setup fee (one-time)' },
-        unit_amount: effectiveSetupCents,
+        unit_amount: setupCents,
       },
       quantity: 1,
     })
@@ -116,7 +116,7 @@ export async function POST(
           cloudgreet_business_id: biz.id,
           cloudgreet_rep_id: auth.userId,
           monthly_cents: String(monthlyCents),
-          setup_fee_cents: String(effectiveSetupCents),
+          setup_fee_cents: String(setupCents),
           free_trial: String(freeTrial),
         },
       },
