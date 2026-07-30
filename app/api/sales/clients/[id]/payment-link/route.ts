@@ -85,7 +85,12 @@ export async function POST(
       quantity: 1,
     },
   ]
-  if (setupCents > 0) {
+  // On a free trial the setup fee is NOT a checkout line item (those bill
+  // immediately, defeating the trial). Instead the webhook attaches it as a
+  // pending invoice item on the subscription so Stripe bills it once, on the
+  // first invoice at trial end, together with the first month. Without a
+  // trial it stays a normal one-time line item, charged at checkout.
+  if (setupCents > 0 && !freeTrial) {
     lineItems.push({
       price_data: {
         currency: 'usd',

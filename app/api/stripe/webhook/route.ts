@@ -267,6 +267,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
    const stripe = getStripeClient()
    const sub = await stripe.subscriptions.retrieve(subId)
    resolvedStatus = sub.status
+
+   // Deferred setup fee: on a free-trial link the setup fee was kept off
+   // the Checkout line items (so nothing was due today). Attach it now as
+   // a pending invoice item on the subscription - Stripe rolls it into the
+   // first real invoice at trial end, billed once alongside the first
+   // month. Idempotency key guards against webhook retries double-adding.
+   if (session.metadata?.free_trial === 'true') {
+    const setupCents = parseInt(session.metadata?.setup_fee_cents || '0', 10)
+    if (Number.isFinite(setupCents) && setupCents > 0) {
+     await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: setupCents,
+      currency: (session.currency || 'usd'),
+      description: 'CloudGreet setup fee (one-time)',
+      subscription: subId,
+     }, { idempotencyKey: `setupfee_${session.id}` })
+     logger.info('Attached deferred setup fee to trial subscription', { subId, setupCents })
+    }
+   }
   } catch (e) {
    logger.warn('Failed to retrieve subscription on checkout completion', {
     sessionId: session.id, error: e instanceof Error ? e.message : 'Unknown',
