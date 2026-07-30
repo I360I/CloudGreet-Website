@@ -366,11 +366,6 @@ export async function POST(request: NextRequest) {
  const startTime = parseAgentDatetime(datetime, businessTz)
  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // Add 1 hour
 
- // Cal.com pre-flight: book on Cal.com BEFORE inserting into our DB.
- // Cal.com is the source of truth for slot availability. If the slot
- // is taken or otherwise rejected we must not leave an orphan
- // "scheduled" row claiming the booking succeeded - the agent then
- // tells the caller "you're booked" while the calendar disagrees.
  const sideEffects: string[] = []
 
  // Real attendee email when we have one: the agent can pass the email it
@@ -397,6 +392,59 @@ export async function POST(request: NextRequest) {
   } catch { return null }
  })()
 
+ // Fields we patch onto an existing row when a booking is a re-book
+ // (dedupe / same-customer 409) rather than a fresh insert.
+ const dupNotes = flightNumber ? `Flight: ${airline ? `${airline} ` : ''}${flightNumber}` : null
+ const findDuplicateApptId = async (): Promise<string | null> => {
+  if (!phone) return null
+  const { data } = await supabaseAdmin
+   .from('appointments')
+   .select('id')
+   .eq('business_id', business_id)
+   .eq('customer_phone', phone)
+   .eq('start_time', startTime.toISOString())
+   .not('status', 'in', '("cancelled","canceled")')
+   .order('created_at', { ascending: false })
+   .limit(1)
+   .maybeSingle()
+  return (data as any)?.id || null
+ }
+ const patchExistingAppt = async (id: string): Promise<void> => {
+  const patch: Record<string, any> = { updated_at: new Date().toISOString() }
+  if (customerEmail) patch.customer_email = customerEmail
+  if (service) patch.service_type = service
+  if (dupNotes) patch.notes = dupNotes
+  await supabaseAdmin.from('appointments').update(patch).eq('id', id).then(undefined, () => null)
+  // Remember a freshly-supplied email on the caller profile too.
+  if (customerEmail && typeof rawEmail === 'string') {
+   try {
+    const { saveCustomerEmail } = await import('@/lib/customers')
+    const profilePhone = phone || body?.call?.from_number || body?.from_number
+    if (profilePhone) void saveCustomerEmail({ businessId: business_id, phone: String(profilePhone), email: customerEmail, name: name || null })
+   } catch { /* best-effort */ }
+  }
+ }
+
+ // DEDUPE (never double-book): same business + same customer phone + same
+ // start time is always an UPDATE, never a new insert. The common trigger
+ // is "booked without email, then the caller supplies an email" - the
+ // agent re-calls book_appointment, and without this we created a second
+ // appointment row, a second Cal.com event, and a second owner alert.
+ // Checked BEFORE the Cal.com pre-flight so we never create a duplicate
+ // calendar booking either. The owner notify further down is only reached
+ // on a genuine insert, so it does not fire on this path.
+ const preExistingApptId = await findDuplicateApptId()
+ if (preExistingApptId) {
+  await patchExistingAppt(preExistingApptId)
+  logger.info('book_appointment deduped to existing row', { business_id, appointment_id: preExistingApptId })
+  return NextResponse.json({ success: true, appointment_id: preExistingApptId, deduped: true })
+ }
+
+ // Cal.com pre-flight: book on Cal.com BEFORE inserting into our DB.
+ // Cal.com is the source of truth for slot availability. If the slot
+ // is taken or otherwise rejected we must not leave an orphan
+ // "scheduled" row claiming the booking succeeded - the agent then
+ // tells the caller "you're booked" while the calendar disagrees.
  const calApiKey = (business as any)?.cal_com_api_key as string | null
  const calEventTypeIdRaw = (business as any)?.cal_com_event_type_id
  let calBooking: { uid: string; id: number } | null = null
@@ -454,6 +502,16 @@ export async function POST(request: NextRequest) {
     business_id, status, error: msg, unavailable,
    })
    if (unavailable) {
+    // If the conflicting slot is THIS customer's own existing booking at
+    // this exact time, it's a re-book of the same appointment, not a real
+    // clash. Patch any newly-supplied fields and report success instead of
+    // sending the agent off to offer alternative times.
+    const sameCustomerApptId = await findDuplicateApptId()
+    if (sameCustomerApptId) {
+     await patchExistingAppt(sameCustomerApptId)
+     logger.info('book_appointment 409 resolved as same-customer rebook', { business_id, appointment_id: sameCustomerApptId })
+     return NextResponse.json({ success: true, already_booked: true, appointment_id: sameCustomerApptId })
+    }
     return NextResponse.json({
      success: false,
      error: 'slot_unavailable',

@@ -21,8 +21,8 @@ export async function recordDispatchSend(args: {
   fromNumber: string
   body: string
   telnyxMessageId: string | null
-  /** 'dispatch' (owner call-back text) or 'report_alert' (text-to-book report link). */
-  kind?: 'dispatch' | 'report_alert'
+  /** 'dispatch' (owner call-back text), 'report_alert' (text-to-book report link), or 'booking_detail' (the full owner booking notification). */
+  kind?: 'dispatch' | 'report_alert' | 'booking_detail'
 }): Promise<void> {
   try {
     await supabaseAdmin.from('dispatch_notifications').insert({

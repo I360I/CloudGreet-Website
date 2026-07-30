@@ -31,7 +31,15 @@ export async function sendAdminCopy(args: {
   if (adminPhone === fromNumber) return
 
   const label = (args.clientName || 'client').trim()
-  const body = `[${label}] ${args.kind}: ${args.body}`.slice(0, 1500)
+  // A client's own booking template frequently leads with "<Business>
+  // booking:" (Steve's does), so wrapping it as "[<Business>] booking: "
+  // rendered the business name twice: "[Smart Ride Central Ohio LLC]
+  // booking: Smart Ride Central Ohio LLC booking: Denise ...". Strip a
+  // leading "<Business> <word>:" from the body before wrapping so the
+  // name appears exactly once.
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const inner = args.body.replace(new RegExp(`^\\s*${escaped}\\s+\\w+:\\s*`, 'i'), '')
+  const body = `[${label}] ${args.kind}: ${inner}`.slice(0, 1500)
 
   try {
     await telnyxClient.sendSMS(adminPhone, body, fromNumber)

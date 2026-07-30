@@ -36,6 +36,16 @@ export const DEFAULT_EMERGENCY_SMS_TEMPLATE =
 export const TEMPLATE_MAX_LENGTH = 320
 
 /**
+ * Max length for the RENDERED owner notification we actually send. The
+ * template the contractor authors is capped at TEMPLATE_MAX_LENGTH in the
+ * editor, but a fully-populated ride (name, phone, pickup, dropoff, time,
+ * service, email, flight, "Booked to your calendar") renders longer than
+ * 320 and was being sliced mid-sentence right after "Booked to". Telnyx
+ * concatenates SMS up to 1600 chars, so give the send real headroom.
+ */
+export const SMS_SEND_MAX_LENGTH = 1200
+
+/**
  * Variables a contractor can use in their template. Listed in the UI
  * as fill-me hints. Order = how they appear in the help text.
  */
@@ -190,10 +200,27 @@ export async function sendBookingNotification(
     ...ctx,
     business: ctx.business || (biz as any).business_name || null,
   }
-  const message = renderTemplate(template, finalCtx).slice(0, TEMPLATE_MAX_LENGTH)
+  const message = renderTemplate(template, finalCtx).slice(0, SMS_SEND_MAX_LENGTH)
 
   try {
-    await telnyxClient.sendSMS(to, message, fromNumber)
+    const sent = await telnyxClient.sendSMS(to, message, fromNumber)
+    // Log the full owner notification to dispatch_notifications so it's
+    // delivery-tracked (and DLR-retried) like the short report_alert, not
+    // invisible. New kind 'booking_detail' distinguishes it from the
+    // dispatch call-back text and the text-to-book report link.
+    if (!ctx.is_emergency) {
+      try {
+        const { recordDispatchSend } = await import('./dispatch-tracking')
+        await recordDispatchSend({
+          businessId,
+          recipientPhone: to,
+          fromNumber,
+          body: message,
+          telnyxMessageId: (sent as any)?.data?.id || null,
+          kind: 'booking_detail',
+        })
+      } catch { /* delivery logging is best-effort */ }
+    }
     // Mirror to the platform admin so we see every booking land across
     // all clients without logging into each dashboard. Fire-and-forget;
     // a failure here NEVER blocks the primary owner notification.
