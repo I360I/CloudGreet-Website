@@ -227,8 +227,10 @@ export default function MetricsPage() {
                   {data.hours.filter((h) => h.hour >= 7 && h.hour <= 20).map((h) => {
                     const max = Math.max(...data.hours.map((x) => x.dials), 1)
                     const isBest = bestHour && h.hour === bestHour.hour
+                    const h12 = h.hour % 12 === 0 ? 12 : h.hour % 12
+                    const ampm = h.hour < 12 ? 'am' : 'pm'
                     return (
-                      <div key={h.hour} className="flex-1 flex flex-col items-center gap-1 h-full justify-end" title={`${h.hour}:00 - ${h.dials} dials, ${h.connects} connects`}>
+                      <div key={h.hour} className="flex-1 flex flex-col items-center gap-1 h-full justify-end" title={`${h12}${ampm}: ${h.dials} dials, ${h.connects} connects`}>
                         <div className="w-full rounded-t-[3px]"
                           style={{ height: `${Math.max(3, (h.dials / max) * 100)}%`, background: isBest ? 'var(--dgreen)' : 'var(--dblue)', opacity: h.dials ? (isBest ? 1 : 0.55) : 0.12 }} />
                         <span className="text-[8px] font-mono" style={{ color: 'var(--dmut2)' }}>{h.hour % 12 === 0 ? 12 : h.hour % 12}</span>
@@ -249,8 +251,12 @@ export default function MetricsPage() {
                     ['Won', data.funnel.won, 'var(--dgreen)'],
                   ] as const).map(([label, val, color], i, arr) => {
                     const max = Math.max(Number(arr[0][1]), 1)
+                    const tip =
+                      label === 'Demos set' ? `Demos set: ${val}` :
+                      label === 'Held' ? `Held (showed): ${val}` :
+                      `Won: ${val}`
                     return (
-                      <div key={label as string} className="flex items-center gap-3">
+                      <div key={label as string} className="flex items-center gap-3" title={tip}>
                         <span className="w-20 text-[11px] font-mono uppercase tracking-wide flex-shrink-0" style={{ color: 'var(--dmut)' }}>{label}</span>
                         <div className="flex-1 h-5 rounded-md overflow-hidden" style={{ background: 'var(--dseg)' }}>
                           <motion.div initial={{ width: 0 }} animate={{ width: `${(Number(val) / max) * 100}%` }}
