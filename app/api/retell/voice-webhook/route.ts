@@ -892,6 +892,107 @@ export async function POST(request: NextRequest) {
   did: sideEffects,
  })
  }
+ case 'smartride_airport_quote': {
+ // Smart Ride airport quote: relay the caller's trip to Steve's own
+ // server-authoritative quoting API. We NEVER compute or trust a price -
+ // his system owns pricing/availability. Returns the price + availability
+ // for the agent to read back.
+ if (!resolvedBusinessId) {
+   return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
+ }
+ const { smartRideConfigured, quoteAirport } = await import('@/lib/smartride-api')
+ if (!smartRideConfigured()) {
+   return NextResponse.json({ success: false, error: 'smartride_not_configured', guidance: 'The airport booking system is not connected yet. Take the caller\'s info and let them know Steve will follow up.' }, { status: 503 })
+ }
+ const a = tool.arguments || {}
+ const asStr = (v: any) => v === undefined || v === null ? undefined : String(v)
+ const asNum = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : undefined }
+ const qres = await quoteAirport({
+   tripType: (a.tripType || 'One Way'), direction: a.direction, airport: a.airport,
+   localAddress: String(a.localAddress || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''),
+   stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
+   stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
+   returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
+   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+ })
+ if (!qres.ok) {
+   const conflict = qres.status === 400
+   return NextResponse.json({
+     success: false, error: qres.error,
+     detail: typeof qres.detail === 'object' ? (qres.detail as any)?.error : qres.detail,
+     guidance: conflict
+       ? 'Something in the trip details was off (check the airport, address, or that the pickup is at least 24 hours out). Ask the caller to clarify and try again.'
+       : 'The booking system had trouble. Take the caller\'s info and tell them Steve will follow up to confirm the quote.',
+   }, { status: 200 })
+ }
+ const q = qres.data
+ const total = q.quote?.pricing?.total
+ const currency = q.quote?.currency || 'USD'
+ const available = q.availability?.available === true
+ return NextResponse.json({
+   success: true,
+   available,
+   price: total,
+   currency,
+   airport: q.quote?.airportLabel,
+   pickup: q.quote?.pickup,
+   destination: q.quote?.destination,
+   miles: q.quote?.miles,
+   booking_note: q.bookingNote || null,
+   guidance: available
+     ? `Quote is $${total} ${currency}. Read the total to the caller. If they want to book, collect their name, phone, email, and any flight number, then call smartride_airport_book with the SAME trip details.`
+     : `That time isn't available (${q.bookingNote || 'calendar conflict'}). Don't say it's booked. Offer to send the request to Steve to check, or suggest a different time. You can still call smartride_airport_book if the caller wants Steve to review it.`,
+ })
+ }
+ case 'smartride_airport_book': {
+ // Submit a caller-approved airport booking to Steve's booking API. His
+ // server revalidates and recalculates everything; we send a stable
+ // Idempotency-Key so a retry never double-books. The reply is PENDING
+ // Steve's confirmation - never describe it as confirmed.
+ if (!resolvedBusinessId) {
+   return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
+ }
+ const { smartRideConfigured, bookAirport } = await import('@/lib/smartride-api')
+ if (!smartRideConfigured()) {
+   return NextResponse.json({ success: false, error: 'smartride_not_configured', guidance: 'The airport booking system is not connected yet. Take the caller\'s info and let them know Steve will follow up.' }, { status: 503 })
+ }
+ const a = tool.arguments || {}
+ const asStr = (v: any) => v === undefined || v === null ? undefined : String(v)
+ const asNum = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : undefined }
+ // Idempotency key: this call + a signature of the trip, so a retry of the
+ // SAME booking in the SAME call reuses the key (no dup), but a different
+ // trip gets a fresh key. Capped at 200 chars per Steve's spec.
+ const callId = String(body?.call?.call_id || body?.call_id || 'nocall')
+ const tripSig = [a.airport, a.direction, a.pickupDate, a.pickupTime, a.localAddress].map((x) => String(x || '')).join('|')
+ let h = 0; for (let i = 0; i < tripSig.length; i++) h = (h * 31 + tripSig.charCodeAt(i)) >>> 0
+ const idempotencyKey = `${callId}:${h.toString(36)}`.slice(0, 200)
+ const bres = await bookAirport({
+   tripType: (a.tripType || 'One Way'), direction: a.direction, airport: a.airport,
+   localAddress: String(a.localAddress || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''),
+   stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
+   stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
+   returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
+   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+   firstName: String(a.firstName || ''), lastName: String(a.lastName || ''),
+   phone: String(a.phone || ''), email: String(a.email || ''),
+   flightNumber: asStr(a.flightNumber), returnFlightNumber: asStr(a.returnFlightNumber),
+   specialItems: asStr(a.specialItems), notes: asStr(a.notes),
+ }, idempotencyKey)
+ if (!bres.ok) {
+   return NextResponse.json({
+     success: false, error: bres.error,
+     detail: typeof bres.detail === 'object' ? (bres.detail as any)?.error : bres.detail,
+     guidance: 'The booking request didn\'t go through. Do NOT tell the caller they\'re booked. Take their details and let them know Steve will follow up to confirm.',
+   }, { status: 200 })
+ }
+ const bk = bres.data
+ return NextResponse.json({
+   success: true,
+   reference: bk.reference,
+   status: bk.status,
+   guidance: `Request submitted. Read the reference number "${bk.reference}" back to the caller and tell them it's PENDING Steve's confirmation - he'll reach out to confirm. Do NOT say it's confirmed or booked.`,
+ })
+ }
  case 'save_customer_email': {
  if (!resolvedBusinessId) {
    return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
