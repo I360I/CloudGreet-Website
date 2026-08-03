@@ -915,19 +915,26 @@ export async function POST(request: NextRequest) {
    passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
  })
  if (!qres.ok) {
-   const conflict = qres.status === 400
+   // Steve's error body is JSON ({ ok:false, error:"..." }); pull the message.
+   const detailStr = typeof qres.detail === 'string'
+     ? qres.detail
+     : String((qres.detail as any)?.error ?? (qres.detail as any)?.message ?? '')
+   // Steve's system enforces the 24-hour minimum and returns a clear message.
+   // Route to the callback/dispatch flow, not a generic "something was off".
+   const under24 = /24[\s-]?hour|in advance/i.test(detailStr)
    // "Could not verify the route and fare" (Steve's 503) is almost always an
-   // incomplete/unroutable address - a bare street with no city. Steer the
-   // agent to collect the full address and retry rather than give up.
-   const routeIssue = qres.status === 503 || /route|fare|verify/i.test(String((qres.detail as any) ?? ''))
+   // incomplete/unroutable address - a bare street with no city.
+   const routeIssue = qres.status === 503 || /route|fare|verify/i.test(detailStr)
    return NextResponse.json({
      success: false, error: qres.error,
      detail: typeof qres.detail === 'object' ? (qres.detail as any)?.error : qres.detail,
-     guidance: conflict
-       ? 'Something in the trip details was off (check the airport, address, or that the pickup is at least 24 hours out). Ask the caller to clarify and try again.'
+     guidance: under24
+       ? "That pickup is under Steve's 24-hour minimum. Do NOT refuse the caller. Say Steve usually needs about 24 hours notice, offer to take their details so he can see if he can fit it in, collect their name and best number, then call send_dispatch_request with the trip details (notes prefixed 'UNDER 24HR AIRPORT REQUEST'). Then close with the transfer/callback close."
        : routeIssue
          ? "Steve's system couldn't route that trip, which almost always means the local address is incomplete. Do NOT tell the caller it failed. Ask for the FULL street address including the city (and state if they have it), then call smartride_airport_quote again with the complete address."
-         : "The booking system had trouble. Take the caller's info and tell them Steve will follow up to confirm the quote.",
+         : qres.status === 400
+           ? 'Something in the trip details was off (check the airport, the address, or the date/time). Ask the caller to clarify and try again.'
+           : "The booking system had trouble. Take the caller's info and tell them Steve will follow up to confirm the quote.",
    }, { status: 200 })
  }
  const q = qres.data
