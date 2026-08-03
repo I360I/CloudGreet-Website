@@ -8,20 +8,26 @@
  * calls these endpoints, and relays the response. We never calculate or
  * trust a price on our side.
  *
- * Contract (from Steve's CLOUDGREET_API.md, 2026-08-02):
+ * Contract (verified live against Steve's sandbox, 2026-08-03):
  *   Base URL: SMARTRIDE_API_BASE (default https://book.smartridecentralohio.com)
  *   Auth:     Authorization: Bearer <SMARTRIDE_API_KEY>
- *   Quote:    POST /api/cloudgreet/quote
- *   Booking:  POST /api/booking   (also needs a unique Idempotency-Key header)
+ *   Mode:     SMARTRIDE_MODE = 'sandbox' (default) | 'production'
+ *     sandbox    -> POST /api/cloudgreet/sandbox/quote  + /api/cloudgreet/sandbox/booking
+ *                   (bookings simulated: saved:false, no email/SMS sent; safe to test)
+ *     production -> POST /api/cloudgreet/quote          + /api/booking
+ *                   (real bookings; only after Steve issues production credentials)
+ *   Booking also needs a unique Idempotency-Key header (<=200 chars).
  *
- * The API key lives ONLY in Vercel env / secret storage, never in a prompt
- * or browser. Airport trips only for now; non-airport rides are handled by
- * transferring/texting Steve directly (per his email).
+ * The API key lives ONLY in Vercel env / secret storage, never in a prompt,
+ * browser, log, or repo. Airport trips only for now; non-airport rides are
+ * handled by transferring/texting Steve directly (per his email).
  *
- * NOTE: the exact quote-response price field name and the booking status
- * enum are still being confirmed with Steve. quoteAirport/bookAirport return
- * the raw parsed JSON so the tool layer relays whatever he sends without this
- * client hard-coding a field name it can't yet verify.
+ * Response shape (from his sandbox guide): quote total is `quote.pricing.total`
+ * with `quote.currency`; availability is `availability.available` (an HTTP 200
+ * does NOT by itself mean available). A booking returns `reference`,
+ * `status` ("pending"), and `saved` - treat `saved:false` as authoritative
+ * "no real booking exists". Never book when the status is not 200, `ok` is
+ * not true, or `availability.available` is not true.
  */
 
 import { logger } from '@/lib/monitoring'
@@ -31,6 +37,15 @@ const DEFAULT_BASE = 'https://book.smartridecentralohio.com'
 function baseUrl(): string {
   return (process.env.SMARTRIDE_API_BASE || DEFAULT_BASE).replace(/\/+$/, '')
 }
+
+function isSandbox(): boolean {
+  // Default to sandbox until Steve issues production credentials, so we can
+  // never accidentally submit a real booking against an unreviewed integration.
+  return (process.env.SMARTRIDE_MODE || 'sandbox').toLowerCase() !== 'production'
+}
+
+const QUOTE_PATH = () => isSandbox() ? '/api/cloudgreet/sandbox/quote' : '/api/cloudgreet/quote'
+const BOOK_PATH = () => isSandbox() ? '/api/cloudgreet/sandbox/booking' : '/api/booking'
 
 function apiKey(): string | null {
   const k = (process.env.SMARTRIDE_API_KEY || '').trim()
@@ -120,8 +135,8 @@ async function call<T>(
  * price, and calendar availability. A calendar conflict is advisory - the
  * agent may still offer to submit the request for Steve's review.
  */
-export async function quoteAirport(input: SmartRideQuoteInput): Promise<SmartRideResult<Record<string, unknown>>> {
-  return call<Record<string, unknown>>('/api/cloudgreet/quote', input)
+export async function quoteAirport(input: SmartRideQuoteInput): Promise<SmartRideResult<SmartRideQuoteResponse>> {
+  return call<SmartRideQuoteResponse>(QUOTE_PATH(), input)
 }
 
 /**
@@ -140,5 +155,45 @@ export async function bookAirport(
   if (!key) {
     return { ok: false, status: 0, error: 'missing_idempotency_key', detail: 'A stable Idempotency-Key is required for bookings.' }
   }
-  return call<Record<string, unknown>>('/api/booking', input, { 'Idempotency-Key': key })
+  return call<SmartRideBookingResponse>(BOOK_PATH(), input, { 'Idempotency-Key': key })
+}
+
+/* --- Response shapes (from Steve's sandbox guide, verified live) --------- */
+
+export type SmartRideAvailability = {
+  available: boolean
+  outbound?: { available: boolean; windowStart: string; windowEnd: string; conflictCount: number } | null
+  returnRide?: unknown | null
+}
+
+export type SmartRideQuoteResponse = {
+  ok: boolean
+  sandbox?: boolean
+  quote: {
+    airportLabel?: string
+    pickup?: string
+    destination?: string
+    miles?: number
+    pricing: {
+      firstLeg?: { total: number; currency?: string; mileageCharge?: number; airportFee?: number; salesTax?: number } | null
+      returnLeg?: { total: number } | null
+      total: number
+    }
+    currency?: string
+  }
+  availability: SmartRideAvailability
+  bookingNote?: string | null
+}
+
+export type SmartRideBookingResponse = {
+  ok: boolean
+  sandbox?: boolean
+  simulated?: boolean
+  saved?: boolean
+  reference: string
+  status: string        // "pending"
+  availability: SmartRideAvailability
+  quote?: { pricing?: { total?: number }; currency?: string }
+  notifications?: { email?: string; sms?: string }
+  message?: string
 }
