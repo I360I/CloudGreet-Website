@@ -39,13 +39,13 @@ const tripProps = {
 }
 const QUOTE_TOOL = {
   type: 'custom', name: 'smartride_airport_quote', url: WEBHOOK,
-  speak_during_execution: true, speak_after_execution: true,
+  speak_during_execution: false, speak_after_execution: true,
   description: "Get Steve's authoritative airport quote + availability. Call once you have trip type, direction, airport, the full local address with city, and pickup date/time. Returns price, currency, availability. Never calculate a price yourself.",
   parameters: { type: 'object', properties: tripProps, required: ['tripType', 'direction', 'airport', 'localAddress', 'pickupDate', 'pickupTime'] },
 }
 const BOOK_TOOL = {
   type: 'custom', name: 'smartride_airport_book', url: WEBHOOK,
-  speak_during_execution: true, speak_after_execution: true,
+  speak_during_execution: false, speak_after_execution: true,
   description: "Submit a caller-approved airport booking to Steve. Call ONLY after the caller heard the quote and agreed, and you have first name, last name, phone, and email. Send the SAME trip details. Returns a reference; the ride is PENDING Steve's confirmation - never say confirmed/booked.",
   parameters: { type: 'object', properties: { ...tripProps, firstName: { type: 'string' }, lastName: { type: 'string' }, phone: { type: 'string', description: '10-digit US phone.' }, email: { type: 'string' }, flightNumber: { type: 'string' }, returnFlightNumber: { type: 'string' }, specialItems: { type: 'string', description: 'Oversized items, gate codes, child seats, wheelchair, etc.' }, notes: { type: 'string' } }, required: ['tripType', 'direction', 'airport', 'localAddress', 'pickupDate', 'pickupTime', 'firstName', 'lastName', 'phone', 'email'] },
 }

@@ -945,7 +945,7 @@ export async function POST(request: NextRequest) {
    miles: q.quote?.miles,
    booking_note: q.bookingNote || null,
    guidance: available
-     ? `Quote is $${total} ${currency}. Read the total to the caller. If they want to book, collect their name, phone, email, and any flight number, then call smartride_airport_book with the SAME trip details.`
+     ? `Quote is $${total} ${currency}. Say the price briefly and naturally, e.g. "That comes to about $${total}" or "That's gonna be $${total}." Do NOT re-list the pickup, dropoff, date, or passenger count again - they already heard it. If they want to book, collect their name, mobile, email, and any flight number, then call smartride_airport_book with the SAME trip details.`
      : `That time isn't available (${q.bookingNote || 'calendar conflict'}). Don't say it's booked. Offer to send the request to Steve to check, or suggest a different time. You can still call smartride_airport_book if the caller wants Steve to review it.`,
  })
  }
