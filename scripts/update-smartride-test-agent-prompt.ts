@@ -20,7 +20,7 @@ const tripProps = {
   tripType: { type: 'string', enum: ['One Way', 'Round Trip'], description: 'One Way or Round Trip.' },
   direction: { type: 'string', enum: ['To the airport', 'From the airport'], description: 'To the airport or From the airport.' },
   airport: { type: 'string', enum: AIRPORT_ENUM, description: 'Airport/FBO code. CMH = John Glenn Columbus, LCK = Rickenbacker. Default CMH unless they name an FBO.' },
-  localAddress: { type: 'string', description: 'The non-airport pickup or drop-off street address.' },
+  localAddress: { type: 'string', description: "The non-airport pickup or drop-off address - the FULL street address INCLUDING the city (and state if known), e.g. '1111 Main Street, Columbus, OH'. A bare street name with no city cannot be routed and will fail; always confirm the city before sending." },
   pickupDate: { type: 'string', description: 'Pickup date as YYYY-MM-DD. Use the CURRENT year from the current time given in the prompt. Must be at least 24 hours out.' },
   pickupTime: { type: 'string', description: 'Pickup time as 24-hour HH:MM Eastern, e.g. 17:00 for 5 PM.' },
   stopCount: { type: 'integer', enum: [0, 1, 2], description: 'Extra stops. Default 0.' },
@@ -51,7 +51,7 @@ const OVERRIDE = `<!-- cg:smartride_api_test:start -->
 This agent books AIRPORT rides through Steve's own booking system, not the internal quote engine.
 
 - For AIRPORT trips (to or from CMH, Rickenbacker/LCK, or an FBO): do NOT use compute_quote, lookup_drive_time, lookup_availability, or book_appointment. Those are OFF for airport rides here. Instead:
-  1. Gather the trip details (direction to/from airport, which airport, the local address, date, time, one-way vs round trip, passengers, bags).
+  1. Gather the trip details (direction to/from airport, which airport, the local address, date, time, one-way vs round trip, passengers, bags). The local address MUST be a full street address WITH the city (e.g. "1111 Main Street, Columbus"). A street with no city can't be routed - if the caller only gives a street, ask which city before you quote.
   2. Call smartride_airport_quote. Steve's system returns the price and whether that time is available. Read the total back exactly as returned. If it says not available, don't say it's booked - offer to send it to Steve to check or try another time.
   3. Once the caller agrees and you've collected first name, last name, phone, and email (plus airline + flight number if they have it), call smartride_airport_book with the SAME trip details. Read the returned reference number back and say it's PENDING Steve's confirmation - never "confirmed" or "booked".
 - Pass dates to the tools as YYYY-MM-DD using the CURRENT year from the current time above, and times as 24-hour HH:MM Eastern. Steve needs at least 24 hours notice.

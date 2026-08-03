@@ -916,12 +916,18 @@ export async function POST(request: NextRequest) {
  })
  if (!qres.ok) {
    const conflict = qres.status === 400
+   // "Could not verify the route and fare" (Steve's 503) is almost always an
+   // incomplete/unroutable address - a bare street with no city. Steer the
+   // agent to collect the full address and retry rather than give up.
+   const routeIssue = qres.status === 503 || /route|fare|verify/i.test(String((qres.detail as any) ?? ''))
    return NextResponse.json({
      success: false, error: qres.error,
      detail: typeof qres.detail === 'object' ? (qres.detail as any)?.error : qres.detail,
      guidance: conflict
        ? 'Something in the trip details was off (check the airport, address, or that the pickup is at least 24 hours out). Ask the caller to clarify and try again.'
-       : 'The booking system had trouble. Take the caller\'s info and tell them Steve will follow up to confirm the quote.',
+       : routeIssue
+         ? "Steve's system couldn't route that trip, which almost always means the local address is incomplete. Do NOT tell the caller it failed. Ask for the FULL street address including the city (and state if they have it), then call smartride_airport_quote again with the complete address."
+         : "The booking system had trouble. Take the caller's info and tell them Steve will follow up to confirm the quote.",
    }, { status: 200 })
  }
  const q = qres.data
