@@ -896,10 +896,9 @@ export async function POST(request: NextRequest) {
  // Smart Ride airport quote: relay the caller's trip to Steve's own
  // server-authoritative quoting API. We NEVER compute or trust a price -
  // his system owns pricing/availability. Returns the price + availability
- // for the agent to read back.
- if (!resolvedBusinessId) {
-   return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
- }
+ // for the agent to read back. No business-link guard: this calls Steve's
+ // external API (keyed by env), not a per-business calendar, and the tool
+ // only lives on Smart Ride agents.
  const { smartRideConfigured, quoteAirport } = await import('@/lib/smartride-api')
  if (!smartRideConfigured()) {
    return NextResponse.json({ success: false, error: 'smartride_not_configured', guidance: 'The airport booking system is not connected yet. Take the caller\'s info and let them know Steve will follow up.' }, { status: 503 })
@@ -948,10 +947,8 @@ export async function POST(request: NextRequest) {
  // Submit a caller-approved airport booking to Steve's booking API. His
  // server revalidates and recalculates everything; we send a stable
  // Idempotency-Key so a retry never double-books. The reply is PENDING
- // Steve's confirmation - never describe it as confirmed.
- if (!resolvedBusinessId) {
-   return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
- }
+ // Steve's confirmation - never describe it as confirmed. No business-link
+ // guard (see quote handler above).
  const { smartRideConfigured, bookAirport } = await import('@/lib/smartride-api')
  if (!smartRideConfigured()) {
    return NextResponse.json({ success: false, error: 'smartride_not_configured', guidance: 'The airport booking system is not connected yet. Take the caller\'s info and let them know Steve will follow up.' }, { status: 503 })
