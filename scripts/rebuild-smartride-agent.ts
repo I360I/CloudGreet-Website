@@ -82,7 +82,7 @@ async function main() {
       general_prompt: prompt,
       general_tools: tools,
       knowledge_base_ids: [kb.knowledge_base_id],
-      begin_message: 'Thanks for calling Smart Ride Central Ohio, are you needing a ride to or from the airport, or somewhere else?',
+      begin_message: 'Thanks for calling Smart Ride Central Ohio, where every ride is personally driven by Steve French. This call may be recorded. Are you looking for a ride to or from the airport, or something else?',
     }),
   })
   if (!up.ok) throw new Error('llm update failed: ' + (await up.text()).slice(0, 300))
