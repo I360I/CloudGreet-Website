@@ -62,7 +62,9 @@ const BOOK_TOOL = {
   description: "Submit a caller-approved airport booking to Steve. Call ONLY after the caller heard the quote and agreed, and you have first name, last name, phone, and email. Send the SAME trip details. Returns a reference; the ride is PENDING Steve's confirmation - never say confirmed/booked.",
   parameters: { type: 'object', properties: { ...tripProps, firstName: { type: 'string' }, lastName: { type: 'string' }, phone: { type: 'string', description: '10-digit US phone.' }, email: { type: 'string' }, flightNumber: { type: 'string' }, returnFlightNumber: { type: 'string' }, specialItems: { type: 'string', description: 'Oversized items, gate codes, child seats, wheelchair, etc.' }, notes: { type: 'string' } }, required: ['tripType', 'direction', 'airport', 'localAddress', 'pickupDate', 'pickupTime', 'firstName', 'lastName', 'phone', 'email'] },
 }
-const BEGIN = 'Thanks for calling Smart Ride Central Ohio, where every ride is personally driven by Steve French. This call may be recorded. Are you looking for a ride to or from the airport, or something else?'
+// Steve's original long greeting (restored per owner request 2026-08-04). The
+// airport-vs-else branch is handled by the prompt's first turn, not the greeting.
+const BEGIN = "Thank you for calling Smart Ride Central Ohio, where every ride is personally driven by owner Steve French.\n\nYou're speaking with our smart booking system, which can help with pricing, availability, airport transportation, and bookings.\n\nThis call may be recorded and transcribed for quality and training purposes.\n\nIf you'd like to speak directly with Steve, just say 'transfer' and I'll try to connect you.\n\nHow can I help you today?"
 
 async function getLlmId(agentId: string): Promise<string> {
   const a: any = await (await fetch(`${RETELL}/get-agent/${agentId}`, { headers: rh })).json()
