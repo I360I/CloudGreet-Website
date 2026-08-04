@@ -998,6 +998,35 @@ export async function POST(request: NextRequest) {
    }, { status: 200 })
  }
  const bk = bres.data
+ const ref = String((bk as any)?.reference || '')
+
+ // Send the caller a confirmation text (branded, worded PENDING). This restores
+ // the customer confirmation the old flow sent via send_booking_sms - the new
+ // airport flow books through Steve's API, so we send it from here using the
+ // same Telnyx sender (CLOUDGREET_NOTIFICATIONS_FROM). Non-blocking: the booking
+ // already succeeded, so an SMS failure must never change what the agent reads back.
+ try {
+   const fromNum = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+   const custPhone = normaliseE164(String(a.phone || '')) || String(a.phone || '')
+   if (fromNum && custPhone && ref) {
+     const fmtWhen = (d: string, t: string): string => {
+       const mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+       const dp = String(d).split('-'); const tp = String(t).split(':')
+       const m = Number(dp[1]); const day = Number(dp[2]); const hh = Number(tp[0]); const mm = Number(tp[1])
+       if (!m || !day || Number.isNaN(hh)) return ''
+       const ap = hh >= 12 ? 'PM' : 'AM'; const h12 = ((hh + 11) % 12) + 1
+       return ` for ${mo[m - 1]} ${day} at ${h12}:${String(mm || 0).padStart(2, '0')} ${ap}`
+     }
+     const whenStr = fmtWhen(String(a.pickupDate || ''), String(a.pickupTime || ''))
+     const smsBody = `Smart Ride Central Ohio: we've got your airport ride request${whenStr}. Reference ${ref}. It's pending Steve's confirmation, he'll reach out shortly to lock it in. Reply STOP to opt out.`
+     await telnyxClient.sendSMS(custPhone, smsBody, fromNum)
+   } else {
+     logger.warn('smartride customer SMS skipped', { hasFrom: !!fromNum, hasPhone: !!custPhone, hasRef: !!ref })
+   }
+ } catch (smsErr) {
+   logger.error('smartride customer SMS failed', { error: smsErr instanceof Error ? smsErr.message : 'unknown', reference: ref })
+ }
+
  return NextResponse.json({
    success: true,
    reference: bk.reference,
