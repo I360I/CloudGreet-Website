@@ -916,18 +916,19 @@ export async function POST(request: NextRequest) {
  })
  if (!qres.ok) {
    // Steve's error body is JSON ({ ok:false, error:"..." }); pull the message.
-   const detailStr = typeof qres.detail === 'string'
-     ? qres.detail
-     : String((qres.detail as any)?.error ?? (qres.detail as any)?.message ?? '')
+   const err = qres as { ok: false; status: number; error: string; detail?: unknown }
+   const detailStr = typeof err.detail === 'string'
+     ? err.detail
+     : String((err.detail as any)?.error ?? (err.detail as any)?.message ?? '')
    // Steve's system enforces the 24-hour minimum and returns a clear message.
    // Route to the callback/dispatch flow, not a generic "something was off".
    const under24 = /24[\s-]?hour|in advance/i.test(detailStr)
    // "Could not verify the route and fare" (Steve's 503) is almost always an
    // incomplete/unroutable address - a bare street with no city.
-   const routeIssue = qres.status === 503 || /route|fare|verify/i.test(detailStr)
+   const routeIssue = err.status === 503 || /route|fare|verify/i.test(detailStr)
    return NextResponse.json({
-     success: false, error: qres.error,
-     detail: typeof qres.detail === 'object' ? (qres.detail as any)?.error : qres.detail,
+     success: false, error: err.error,
+     detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
      guidance: under24
        ? "That pickup is under Steve's 24-hour minimum. Do NOT refuse the caller. Say Steve usually needs about 24 hours notice, offer to take their details so he can see if he can fit it in, collect their name and best number, then call send_dispatch_request with the trip details (notes prefixed 'UNDER 24HR AIRPORT REQUEST'). Then close with the transfer/callback close."
        : routeIssue
@@ -989,9 +990,10 @@ export async function POST(request: NextRequest) {
    specialItems: asStr(a.specialItems), notes: asStr(a.notes),
  }, idempotencyKey)
  if (!bres.ok) {
+   const err = bres as { ok: false; status: number; error: string; detail?: unknown }
    return NextResponse.json({
-     success: false, error: bres.error,
-     detail: typeof bres.detail === 'object' ? (bres.detail as any)?.error : bres.detail,
+     success: false, error: err.error,
+     detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
      guidance: 'The booking request didn\'t go through. Do NOT tell the caller they\'re booked. Take their details and let them know Steve will follow up to confirm.',
    }, { status: 200 })
  }
