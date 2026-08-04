@@ -1001,12 +1001,22 @@ export async function POST(request: NextRequest) {
  const ref = String((bk as any)?.reference || '')
 
  // Send the caller a confirmation text (branded, worded PENDING). This restores
- // the customer confirmation the old flow sent via send_booking_sms - the new
- // airport flow books through Steve's API, so we send it from here using the
- // same Telnyx sender (CLOUDGREET_NOTIFICATIONS_FROM). Non-blocking: the booking
- // already succeeded, so an SMS failure must never change what the agent reads back.
+ // the customer confirmation the old flow sent, and sends it from the BUSINESS'S
+ // OWN verified SMS line (businesses.sms_phone_number) - the same TFV toll-free
+ // Steve's text-to-book has used for months, so callers see a number they know
+ // and replies route back to his SMS agent (sms-webhook matches sms_phone_number).
+ // Non-blocking: the booking already succeeded, so an SMS failure must never
+ // change what the agent reads back.
  try {
-   const fromNum = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+   let fromNum: string | null = null
+   if (resolvedBusinessId) {
+     const { data: bizSms } = await supabaseAdmin
+       .from('businesses')
+       .select('sms_phone_number')
+       .eq('id', resolvedBusinessId)
+       .maybeSingle()
+     fromNum = ((bizSms as any)?.sms_phone_number as string) || null
+   }
    const custPhone = normaliseE164(String(a.phone || '')) || String(a.phone || '')
    if (fromNum && custPhone && ref) {
      const fmtWhen = (d: string, t: string): string => {
