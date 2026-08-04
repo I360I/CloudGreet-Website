@@ -48,7 +48,13 @@ const QUOTE_PATH = () => isSandbox() ? '/api/cloudgreet/sandbox/quote' : '/api/c
 const BOOK_PATH = () => isSandbox() ? '/api/cloudgreet/sandbox/booking' : '/api/booking'
 
 function apiKey(): string | null {
-  const k = (process.env.SMARTRIDE_API_KEY || '').trim()
+  // Production mode prefers the dedicated live key (SMARTRIDE_API_KEY_PROD) so
+  // the sandbox key can stay staged in the same env without ever being used
+  // against real endpoints. Sandbox mode always uses the generic sandbox key.
+  // Falls back to SMARTRIDE_API_KEY in production if no prod-specific key is set.
+  const prod = (process.env.SMARTRIDE_API_KEY_PROD || '').trim()
+  const generic = (process.env.SMARTRIDE_API_KEY || '').trim()
+  const k = isSandbox() ? generic : (prod || generic)
   return k || null
 }
 
