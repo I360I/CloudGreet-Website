@@ -1,5 +1,7 @@
 interface LogContext {
-  [key: string]: string | number | boolean | undefined;
+  // Log metadata can carry any value (objects, arrays, Errors); the logger
+  // stores the context as-is and never assumes primitive values.
+  [key: string]: unknown;
 }
 
 interface LogEntry {

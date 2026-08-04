@@ -13,8 +13,8 @@ export const runtime = 'nodejs'
  * status='draft' and scheduled_for <= now().
  */
 export async function GET(request: NextRequest) {
-  const denial = await checkCronAuth(request)
-  if (denial) return denial
+  const denial = checkCronAuth(request)
+  if (denial) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const now = new Date().toISOString()
 

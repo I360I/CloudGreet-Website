@@ -12,7 +12,7 @@ export async function getIntegrationSecrets(
   slug: string
 ): Promise<Record<string, string>> {
   const { data, error } = await supabaseAdmin
-    .from<IntegrationSecretRow>('integration_secret_values')
+    .from('integration_secret_values')
     .select('field_key, value_encrypted, status')
     .eq('slug', slug)
 

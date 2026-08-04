@@ -2,8 +2,7 @@ import { z } from 'zod'
 
 export const channelEnum = z.enum(['email', 'sms', 'call'])
 
-export const templateInputSchema = z
-  .object({
+export const templateInputBaseSchema = z.object({
     name: z.string().min(2, 'Template name must be at least 2 characters'),
     channel: z.enum(['email', 'sms']),
     subject: z
@@ -17,6 +16,8 @@ export const templateInputSchema = z
     isDefault: z.boolean().optional().default(false),
     metadata: z.record(z.any()).optional().default({})
   })
+
+export const templateInputSchema = templateInputBaseSchema
   .superRefine((value, ctx) => {
     if (value.channel === 'email' && !value.subject) {
       ctx.addIssue({

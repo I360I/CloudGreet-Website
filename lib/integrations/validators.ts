@@ -35,7 +35,7 @@ const validators: Record<ValidatorKey, (value: string) => Promise<ValidationResu
   async stripeSecret(value) {
     try {
       const stripe = new Stripe(value, {
-        apiVersion: '2022-11-15',
+        apiVersion: '2023-10-16' as any,
         maxNetworkRetries: 0
       })
       await stripe.balance.retrieve()

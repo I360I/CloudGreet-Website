@@ -15,7 +15,7 @@ export async function getProspectingFilters(
   provider: string
 ): Promise<ProspectFiltersInput> {
   const { data, error } = await supabaseAdmin
-    .from<ProspectFilterRow>('prospecting_filters')
+    .from('prospecting_filters')
     .select('filters')
     .eq('provider', provider)
     .maybeSingle()

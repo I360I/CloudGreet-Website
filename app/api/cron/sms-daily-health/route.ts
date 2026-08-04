@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     const pingLine = pingResult.ok
       ? `Agent ping: live (${pingResult.ms}ms)`
-      : `Agent ping: FAILED -- ${pingResult.error}`
+      : `Agent ping: FAILED -- ${(pingResult as { error: string }).error}`
 
     // Build a concise text for SMS / Slack
     const lines: string[] = [

@@ -231,8 +231,6 @@ export async function getLeadDetail(options: {
       `${DEFAULT_LEAD_FIELDS}, industry, job_title, city, state, country, last_contacted_at, sequence_id`
     )
     .eq('id', options.prospectId)
-    .limit(1)
-    .single()
 
   if (options.role === 'sales') {
     leadQuery = leadQuery.eq('assigned_to', options.userId)
@@ -242,7 +240,7 @@ export async function getLeadDetail(options: {
     )
   }
 
-  const { data: prospect, error } = await leadQuery
+  const { data: prospect, error } = await leadQuery.limit(1).single()
   if (error || !prospect) {
     logger.warn('Lead detail not found', { error, prospectId: options.prospectId })
     return null

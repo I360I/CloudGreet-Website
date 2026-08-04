@@ -136,7 +136,7 @@ function HealthPanel({ businessId, label }: { businessId?: string; label: string
             : <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />}
           <div className="min-w-0">
             <span className={`font-medium ${ping.ok ? 'text-sky-300' : 'text-red-300'}`}>
-              {ping.ok ? `Agent live (${ping.ms}ms)` : `Agent unreachable · ${ping.error}`}
+              {ping.ok ? `Agent live (${ping.ms}ms)` : `Agent unreachable · ${(ping as { error: string }).error}`}
             </span>
             {ping.ok && (
               <p className="text-gray-500 truncate mt-0.5">&ldquo;{ping.reply}&rdquo;</p>

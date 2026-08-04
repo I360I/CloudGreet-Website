@@ -7,6 +7,7 @@ import {
   sequenceInputSchema,
   sequenceUpdateSchema,
   templateInputSchema,
+  templateInputBaseSchema,
   statsQuerySchema
 } from '@/lib/prospecting/outreach-schema'
 
@@ -172,7 +173,7 @@ export async function updateTemplate(
   payload: Partial<TemplateInput>,
   businessId?: string
 ) {
-  const parsed = templateInputSchema.partial().parse(payload)
+  const parsed = templateInputBaseSchema.partial().parse(payload)
 
   const updatePayload = {
     ...(parsed.name ? { name: parsed.name } : {}),
@@ -297,12 +298,12 @@ export async function listSequences(businessId?: string) {
 }
 
 export async function getSequence(sequenceId: string, businessId?: string) {
-  let query = supabaseAdmin.from('outreach_sequences').select('*').eq('id', sequenceId).maybeSingle()
+  let query = supabaseAdmin.from('outreach_sequences').select('*').eq('id', sequenceId)
   if (businessId) {
     query = query.or(`business_id.eq.${businessId},business_id.is.null`)
   }
 
-  const { data: sequenceRow, error } = await query
+  const { data: sequenceRow, error } = await query.maybeSingle()
   if (error) {
     logger.error('Failed to fetch outreach sequence', { error })
     throw new Error(error.message)

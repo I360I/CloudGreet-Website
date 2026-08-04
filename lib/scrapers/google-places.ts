@@ -105,8 +105,8 @@ export type PlacesEnrichment = {
 }
 
 export type PlacesAttempt =
- | { ok: true; data: PlacesEnrichment }
- | { ok: false; error: string }
+ | { ok: true; data: PlacesEnrichment; error?: undefined }
+ | { ok: false; error: string; data?: undefined }
 
 export function isGooglePlacesConfigured(): boolean {
  return !!process.env.GOOGLE_PLACES_API_KEY
