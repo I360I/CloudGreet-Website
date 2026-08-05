@@ -912,7 +912,7 @@ export async function POST(request: NextRequest) {
    stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
    stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
    returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
-   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+   passengers: asNum(a.passengers) ?? 1, checkedBags: asNum(a.checkedBags) ?? 0, carryOns: asNum(a.carryOns) ?? 0, carSeats: asNum(a.carSeats) ?? 0,
  })
  if (!qres.ok) {
    // Steve's error body is JSON ({ ok:false, error:"..." }); pull the message.
@@ -983,7 +983,7 @@ export async function POST(request: NextRequest) {
    stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
    stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
    returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
-   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+   passengers: asNum(a.passengers) ?? 1, checkedBags: asNum(a.checkedBags) ?? 0, carryOns: asNum(a.carryOns) ?? 0, carSeats: asNum(a.carSeats) ?? 0,
    firstName: String(a.firstName || ''), lastName: String(a.lastName || ''),
    phone: String(a.phone || ''), email: String(a.email || ''),
    flightNumber: asStr(a.flightNumber), returnFlightNumber: asStr(a.returnFlightNumber),
@@ -1066,7 +1066,7 @@ export async function POST(request: NextRequest) {
    stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
    stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
    returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
-   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+   passengers: asNum(a.passengers) ?? 1, checkedBags: asNum(a.checkedBags) ?? 0, carryOns: asNum(a.carryOns) ?? 0, carSeats: asNum(a.carSeats) ?? 0,
    promoCode: asStr(a.promoCode), notes: asStr(a.notes),
  })
  if (!qres.ok) {
@@ -1121,7 +1121,7 @@ export async function POST(request: NextRequest) {
    stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
    stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
    returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
-   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+   passengers: asNum(a.passengers) ?? 1, checkedBags: asNum(a.checkedBags) ?? 0, carryOns: asNum(a.carryOns) ?? 0, carSeats: asNum(a.carSeats) ?? 0,
    promoCode: asStr(a.promoCode), notes: asStr(a.notes),
    firstName: String(a.firstName || ''), lastName: String(a.lastName || ''),
    phone: String(a.phone || ''), email: String(a.email || ''),
