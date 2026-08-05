@@ -2716,7 +2716,16 @@ async function handleCallEvent(
        .eq('business_id', resolvedBusinessId)
        .gte('created_at', since)
       const cd = String(callerPhone).replace(/\D/g, '')
-      const bookingLanded = (recentAppts || []).some((apptRow: any) =>
+      // SmartRide bookings live in Steve's OWN system, not the appointments
+      // table - a successful smartride_*_book tool result on this call (it
+      // returns {"success":true,...,"reference":"SR-..."}) counts as landed.
+      // Without this, every successful SmartRide voice booking fired a false
+      // "BOOKING DID NOT COMPLETE" alert (hit on Steve's 8/5 test call).
+      const twtc = (call as any)?.transcript_with_tool_calls
+      const smartrideBooked = Array.isArray(twtc) && twtc.some((x: any) =>
+       x?.role === 'tool_call_result' && typeof x.content === 'string' &&
+       x.content.includes('"success":true') && x.content.includes('"reference":"'))
+      const bookingLanded = smartrideBooked || (recentAppts || []).some((apptRow: any) =>
        apptRow.retell_call_id === retellCallId ||
        (cd.length >= 10 && apptRow.customer_phone && String(apptRow.customer_phone).replace(/\D/g, '').includes(cd)),
       )
