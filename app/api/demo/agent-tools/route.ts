@@ -176,6 +176,71 @@ export async function POST(req: Request) {
       }
     }
 
+    case 'send_link': {
+      // REAL demo text of the menu (Oak & Ember) / info - the visible "it can
+      // text you things" moment. Same guardrails + caps as send_booking_sms.
+      const simulated = NextResponse.json({
+        ok: true,
+        result: 'Menu text sent (demo). Tell the caller it is on its way to their phone.',
+      })
+      const fromNumber = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+      if (!fromNumber) return simulated
+
+      const phoneRaw = clean(args.phone || args.phone_number || args.mobile, 24)
+      let digits = phoneRaw.replace(/\D/g, '')
+      if (digits.length === 10) digits = `1${digits}`
+      if (digits.length !== 11 || !digits.startsWith('1')) {
+        return NextResponse.json({
+          ok: false,
+          result: "That phone number didn't look right. Ask the caller to repeat their mobile number digit by digit, then try again.",
+        })
+      }
+      const e164 = `+${digits}`
+      const agentId: string = body?.call?.agent_id || body?.agent_id || ''
+      const brand = DEMO_AGENTS[agentId] || { company: 'CloudGreet', agentName: 'your AI receptionist', vertical: 'demo' }
+
+      try {
+        const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+        const { count: perPhone } = await supabaseAdmin
+          .from('demo_sms_log')
+          .select('id', { count: 'exact', head: true })
+          .eq('phone_digits', digits)
+          .gte('created_at', dayAgo)
+        if ((perPhone ?? 0) >= 2) {
+          return NextResponse.json({
+            ok: true,
+            result: 'A demo text already went to that number recently - tell the caller to check their messages.',
+          })
+        }
+        const { count: globalCount } = await supabaseAdmin
+          .from('demo_sms_log')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', dayAgo)
+        if ((globalCount ?? 0) >= 150) {
+          logger.warn('demo sms global cap hit')
+          return simulated
+        }
+
+        const text = brand.vertical === 'restaurant'
+          ? `(Demo SMS) ${brand.company} menu highlights: wood-fired steaks (8oz filet $42, 14oz ribeye $48), cedar-plank salmon $29, short-rib pappardelle $26, burrata $13. Happy hour Tue-Fri 4-6. Nina can hold you a table right on the call.\n\nSent by the CloudGreet demo. Your customers get these automatically.`
+          : `(Demo SMS) ${brand.company}: here's the info you asked for on the call - ${brand.agentName} can also book you in directly.\n\nSent by the CloudGreet demo. Your customers get these automatically.`
+
+        await telnyxClient.sendSMS(e164, text, fromNumber)
+        void supabaseAdmin
+          .from('demo_sms_log')
+          .insert({ phone_digits: digits, agent_id: agentId || null, vertical: brand.vertical })
+          .then(({ error }) => { if (error) logger.warn('demo_sms_log insert failed', { error: error.message }) })
+
+        return NextResponse.json({
+          ok: true,
+          result: "Menu text sent for real - tell the caller to check their phone. It starts with '(Demo SMS)'.",
+        })
+      } catch (e) {
+        logger.warn('demo send_link failed', { error: e instanceof Error ? e.message : 'unknown' })
+        return simulated
+      }
+    }
+
     case 'cancel_appointment': {
       return NextResponse.json({
         ok: true,
