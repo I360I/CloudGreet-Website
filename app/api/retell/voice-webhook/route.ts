@@ -26,6 +26,32 @@ type RetellToolCall = {
 }
 
 /**
+ * Smart Ride owner booking alert. Texts the owner (Steve) a heads-up on every
+ * booking from the universal CloudGreet notifications line
+ * (CLOUDGREET_NOTIFICATIONS_FROM = +18888630537), so he gets an SMS even while his
+ * own system's owner-SMS is 10DLC-blocked. Interim until his 10DLC is approved, then
+ * his system notifies him and we can dial this back. Customers get their own
+ * confirmation from the business's branded line separately. Non-blocking.
+ */
+async function smartrideOwnerAlert(businessId: string | null, summary: string): Promise<void> {
+ try {
+  const fromNum = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+  if (!businessId || !fromNum || !summary) return
+  const { data: biz } = await supabaseAdmin
+   .from('businesses')
+   .select('notifications_phone, notification_phone, escalation_phone')
+   .eq('id', businessId)
+   .maybeSingle()
+  const ownerPhone = (biz as any)?.notifications_phone || (biz as any)?.notification_phone || (biz as any)?.escalation_phone
+  const to = normaliseE164(String(ownerPhone || '')) || String(ownerPhone || '')
+  if (!to) { logger.warn('smartride owner alert skipped: no owner phone', { businessId }); return }
+  await telnyxClient.sendSMS(to, summary, fromNum)
+ } catch (e) {
+  logger.error('smartride owner alert failed', { error: e instanceof Error ? e.message : 'unknown' })
+ }
+}
+
+/**
  * Pull a real US street address (house number + street + suffix, optional
  * city/state/zip) out of a free-text string. Used as a recovery when the
  * agent put the pickup in the `service`/`notes` field instead of the
@@ -1037,6 +1063,7 @@ export async function POST(request: NextRequest) {
    logger.error('smartride customer SMS failed', { error: smsErr instanceof Error ? smsErr.message : 'unknown', reference: ref })
  }
 
+ await smartrideOwnerAlert(resolvedBusinessId, `New Smart Ride airport request: ${String(a.firstName || '').trim()} ${String(a.lastName || '').trim()} (${String(a.phone || '')}). ${a.direction || ''} ${a.airport || ''}, ${String(a.pickupDate || '')} ${String(a.pickupTime || '')}. Ref ${ref}. Pending your confirmation.`)
  const refs = Array.isArray((bk as any)?.references) ? (bk as any).references : (ref ? [ref] : [])
  return NextResponse.json({
    success: true,
@@ -1158,6 +1185,7 @@ export async function POST(request: NextRequest) {
  } catch (smsErr) {
    logger.error('smartride customer SMS failed', { error: smsErr instanceof Error ? smsErr.message : 'unknown', reference: ref })
  }
+ await smartrideOwnerAlert(resolvedBusinessId, `New Smart Ride request: ${String(a.firstName || '').trim()} ${String(a.lastName || '').trim()} (${String(a.phone || '')}). ${a.serviceOption || 'ride'}, ${a.pickup || ''} to ${a.destination || ''}, ${String(a.pickupDate || '')} ${String(a.pickupTime || '')}. Ref ${ref}. Pending your confirmation.`)
  return NextResponse.json({
    success: true, reference: bk.reference, references: refs, status: bk.status,
    guidance: refs.length > 1
