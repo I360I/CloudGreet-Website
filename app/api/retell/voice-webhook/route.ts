@@ -1020,7 +1020,7 @@ export async function POST(request: NextRequest) {
    return NextResponse.json({
      success: false, error: err.error,
      detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
-     guidance: 'The booking request didn\'t go through. Do NOT tell the caller they\'re booked. Take their details and let them know Steve will follow up to confirm.',
+     guidance: 'The booking request didn\'t go through and NOTHING was sent to Steve. Do NOT tell the caller they\'re booked. Collect their name and best number, then CALL send_dispatch_request with the full trip in the notes (prefixed "BOOKING FAILED - NEEDS MANUAL CONFIRM") so Steve actually gets it, and only then say he\'ll follow up to confirm.',
    }, { status: 200 })
  }
  const bk = bres.data
@@ -1158,7 +1158,7 @@ export async function POST(request: NextRequest) {
    return NextResponse.json({
      success: false, error: err.error,
      detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
-     guidance: 'The booking request didn\'t go through. Do NOT tell the caller they\'re booked. Take their details and let them know Steve will follow up to confirm.',
+     guidance: 'The booking request didn\'t go through and NOTHING was sent to Steve. Do NOT tell the caller they\'re booked. Collect their name and best number, then CALL send_dispatch_request with the full trip in the notes (prefixed "BOOKING FAILED - NEEDS MANUAL CONFIRM") so Steve actually gets it, and only then say he\'ll follow up to confirm.',
    }, { status: 200 })
  }
  const bk = bres.data

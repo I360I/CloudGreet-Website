@@ -667,7 +667,7 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
 - You are NOT on SMS or a phone call. You are the live chat widget on ${businessName}'s website. Ignore any instruction above that says "over SMS", "plain SMS", or "you're texting".
 - IGNORE the "Customer phone" value shown above - it is an internal web session id, NOT a real phone number. You do NOT know the visitor's name or mobile number yet.
 - Just answer questions freely. You do NOT need any contact info to answer questions or give quotes.
-- BEFORE you book or dispatch (book_appointment / send_dispatch_request), you MUST collect the visitor's name AND mobile number, then pass that real mobile number in the tool's phone/customer_phone argument (never the session id). If you don't have their real mobile, ask for it first.
+- BEFORE you book or dispatch (book_appointment, smartride_airport_book, smartride_nonairport_book, or send_dispatch_request), you MUST collect the visitor's name AND mobile number, then pass that real mobile number in the tool's phone/customer_phone argument (never the session id). If you don't have their real mobile, ask for it first.
 - Open warmly, keep replies short, friendly, and in plain text (no markdown, no asterisks).`
 
   let reply: string | null = null
@@ -1179,13 +1179,25 @@ async function runTool(args: {
     const sig = [a.serviceOption || a.airport, a.pickup || a.localAddress, a.destination, a.pickupDate, a.pickupTime].map((x: any) => String(x || '')).join('|')
     let hsh = 0; for (let i = 0; i < sig.length; i++) hsh = (hsh * 31 + sig.charCodeAt(i)) >>> 0
     const idem = `sms:${args.conversationId || args.customerPhone}:${hsh.toString(36)}`.slice(0, 200)
-    const cust = { firstName: String(a.firstName || ''), lastName: String(a.lastName || ''), phone: String(a.phone || args.customerPhone || ''), email: String(a.email || ''), notes: a.notes }
+    // Resolve a REAL mobile. On SMS, customerPhone is the texter's E.164 (Steve's
+    // API accepts +1-prefixed - verified in sandbox). On WEB CHAT customerPhone is
+    // the synthetic "web-{sessionId}" - never send that: Steve's API 400s it and
+    // the customer would be told "Steve will follow up" when nothing was sent.
+    const rawPhone = String(a.phone || args.customerPhone || '')
+    const phoneDigits = rawPhone.replace(/\D/g, '')
+    if (rawPhone.startsWith('web-') || phoneDigits.length < 10) {
+      return {
+        success: false, error: 'need_real_mobile',
+        guidance: "You don't have the customer's real mobile number yet, so the booking was NOT submitted. Ask for their 10-digit mobile, then call this book tool again with the SAME trip details plus the phone. Do NOT tell them it's booked or that Steve will follow up yet.",
+      }
+    }
+    const cust = { firstName: String(a.firstName || ''), lastName: String(a.lastName || ''), phone: rawPhone, email: String(a.email || ''), notes: a.notes }
     const res = args.name === 'smartride_airport_book'
       ? await bookAirport({ tripType: a.tripType || 'One Way', direction: a.direction, airport: a.airport, localAddress: String(a.localAddress || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''), returnDate: a.returnDate, returnTime: a.returnTime, passengers: num(a.passengers) ?? 1, checkedBags: num(a.checkedBags) ?? 0, carryOns: num(a.carryOns) ?? 0, carSeats: num(a.carSeats) ?? 0, flightNumber: a.flightNumber, ...cust }, idem)
       : await bookNonAirport({ serviceOption: a.serviceOption, tripType: a.tripType || 'One Way', pickup: String(a.pickup || ''), destination: String(a.destination || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''), serviceHours: num(a.serviceHours), returnDate: a.returnDate, returnTime: a.returnTime, passengers: num(a.passengers) ?? 1, checkedBags: num(a.checkedBags) ?? 0, carryOns: num(a.carryOns) ?? 0, carSeats: num(a.carSeats) ?? 0, promoCode: a.promoCode, ...cust }, idem)
     if (!res.ok) {
       const err = res as any
-      return { success: false, error: err.error, detail: err.detail?.error ?? err.detail, guidance: "Booking didn't go through. Do NOT say they're booked. Take their details and let them know Steve will follow up to confirm." }
+      return { success: false, error: err.error, detail: err.detail?.error ?? err.detail, guidance: "Booking didn't go through and NOTHING was sent to Steve. Do NOT say they're booked. Call send_dispatch_request with the full trip in the notes (prefixed 'BOOKING FAILED - NEEDS MANUAL CONFIRM') so Steve actually gets it, then tell them he'll follow up to confirm." }
     }
     const bk: any = res.data
     const refs = Array.isArray(bk?.references) ? bk.references : (bk?.reference ? [bk.reference] : [])
@@ -1262,10 +1274,11 @@ async function runTool(args: {
       const alreadyBooked = dispatchPickup && dispatchDropoff && (recentConvMsgs || []).some((row: any) =>
         Array.isArray(row.tool_calls) &&
         row.tool_calls.some((tc: any) => {
-          if (tc?.name !== 'book_appointment') return false
+          // smartride_*_book use pickup/localAddress + destination/airport field names
+          if (!['book_appointment', 'smartride_airport_book', 'smartride_nonairport_book'].includes(tc?.name)) return false
           if (tc?.result?.success !== true) return false
-          const bookedPickup = String(tc?.args?.pickup || '').trim().toLowerCase()
-          const bookedDropoff = String(tc?.args?.dropoff || '').trim().toLowerCase()
+          const bookedPickup = String(tc?.args?.pickup || tc?.args?.localAddress || '').trim().toLowerCase()
+          const bookedDropoff = String(tc?.args?.dropoff || tc?.args?.destination || tc?.args?.airport || '').trim().toLowerCase()
           return bookedPickup && bookedDropoff && bookedPickup === dispatchPickup && bookedDropoff === dispatchDropoff
         })
       )
