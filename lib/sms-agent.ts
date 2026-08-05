@@ -186,6 +186,73 @@ const TOOLS: Anthropic.Messages.Tool[] = [
   },
 ]
 
+// --- SmartRide unified API (airport + non-airport) tools for the SMS/web-chat
+// agent. Scoped to Steve's business ONLY: his channels quote+book through his own
+// API instead of CloudGreet's compute_quote/book_appointment. Every other business
+// keeps the default TOOLS unchanged. (Generalize to a business flag when a 2nd
+// client uses the SmartRide API.)
+const SMARTRIDE_BUSINESS_IDS = new Set<string>(['650406c3-5585-446e-958d-0fbcccf54795'])
+const SR_AIRPORT_ENUM = ['CMH', 'LCK', 'LANE_CMH', 'SIGNATURE_CMH', 'NETJETS_CMH', 'OSU_FBO', 'RICKENBACKER_FBO']
+const srCommon = {
+  tripType: { type: 'string', enum: ['One Way', 'Round Trip'], description: 'One Way or Round Trip.' },
+  pickupDate: { type: 'string', description: 'Pickup date YYYY-MM-DD, current year, at least 12 hours out.' },
+  pickupTime: { type: 'string', description: 'Pickup time 24-hour HH:MM Eastern (e.g. 17:00 for 5 PM).' },
+  returnDate: { type: 'string', description: 'Return date YYYY-MM-DD (round trip).' },
+  returnTime: { type: 'string', description: 'Return time HH:MM (round trip).' },
+  passengers: { type: 'integer' }, checkedBags: { type: 'integer' }, carryOns: { type: 'integer' }, carSeats: { type: 'integer' },
+}
+const srCustomer = {
+  firstName: { type: 'string' }, lastName: { type: 'string' },
+  phone: { type: 'string', description: '10-digit US mobile. Defaults to the texter if omitted.' },
+  email: { type: 'string' }, notes: { type: 'string', description: 'Bags, passenger count, special requests.' },
+}
+const SMARTRIDE_SMS_TOOLS: Anthropic.Messages.Tool[] = [
+  {
+    name: 'smartride_airport_quote',
+    description: "Get Steve's authoritative AIRPORT quote. Call once you have trip type, direction, airport, the full local address WITH city, and pickup date/time. Never calculate a price yourself.",
+    input_schema: { type: 'object', properties: { ...srCommon,
+      direction: { type: 'string', enum: ['To the airport', 'From the airport'] },
+      airport: { type: 'string', enum: SR_AIRPORT_ENUM, description: 'CMH=John Glenn, LCK=Rickenbacker. Default CMH.' },
+      localAddress: { type: 'string', description: 'Non-airport pickup/dropoff, FULL address including city.' },
+    }, required: ['tripType', 'direction', 'airport', 'localAddress', 'pickupDate', 'pickupTime'] },
+  },
+  {
+    name: 'smartride_airport_book',
+    description: "Submit a customer-approved AIRPORT booking to Steve. Only after they heard the quote and agreed, with name/phone/email. Returns a reference; PENDING Steve's review, never say confirmed.",
+    input_schema: { type: 'object', properties: { ...srCommon, ...srCustomer,
+      direction: { type: 'string', enum: ['To the airport', 'From the airport'] },
+      airport: { type: 'string', enum: SR_AIRPORT_ENUM },
+      localAddress: { type: 'string' }, flightNumber: { type: 'string' },
+    }, required: ['tripType', 'direction', 'airport', 'localAddress', 'pickupDate', 'pickupTime', 'firstName', 'lastName', 'phone', 'email'] },
+  },
+  {
+    name: 'smartride_nonairport_quote',
+    description: "Get Steve's authoritative NON-AIRPORT quote (point-to-point, hourly/event, concert/sporting, independent living). Call once you have the serviceOption, full pickup AND destination with city, and date/time. Never calculate a price yourself.",
+    input_schema: { type: 'object', properties: { ...srCommon,
+      serviceOption: { type: 'string', enum: ['Point-to-Point Transfer', 'Independent Living', 'Hourly / Event Service', 'Concert / Sporting Event'], description: 'EXACTLY one of these strings.' },
+      pickup: { type: 'string', description: 'Pickup, FULL address including city.' },
+      destination: { type: 'string', description: 'Destination, FULL address including city.' },
+      serviceHours: { type: 'integer', description: 'Hours (<=12) for Hourly/Event (min 2) or Independent Living (min 1).' },
+    }, required: ['serviceOption', 'tripType', 'pickup', 'destination', 'pickupDate', 'pickupTime'] },
+  },
+  {
+    name: 'smartride_nonairport_book',
+    description: "Submit a customer-approved NON-AIRPORT booking to Steve. Only after they heard the quote and agreed, with name/phone/email. Returns a reference; PENDING Steve's review, never say confirmed.",
+    input_schema: { type: 'object', properties: { ...srCommon, ...srCustomer,
+      serviceOption: { type: 'string', enum: ['Point-to-Point Transfer', 'Independent Living', 'Hourly / Event Service', 'Concert / Sporting Event'] },
+      pickup: { type: 'string' }, destination: { type: 'string' }, serviceHours: { type: 'integer' },
+    }, required: ['serviceOption', 'tripType', 'pickup', 'destination', 'pickupDate', 'pickupTime', 'firstName', 'lastName', 'phone', 'email'] },
+  },
+] as any
+const SMARTRIDE_TOOLSET: Anthropic.Messages.Tool[] = [
+  ...SMARTRIDE_SMS_TOOLS,
+  TOOLS.find((t) => t.name === 'save_customer_email')!,
+  TOOLS.find((t) => t.name === 'send_dispatch_request')!,
+]
+function toolsForBusiness(businessId: string): Anthropic.Messages.Tool[] {
+  return SMARTRIDE_BUSINESS_IDS.has(businessId) ? SMARTRIDE_TOOLSET : TOOLS
+}
+
 export async function handleInboundSms(args: {
   businessId: string
   fromPhone: string
@@ -353,7 +420,7 @@ export async function handleInboundSms(args: {
       model: MODEL,
       max_tokens: 800,
       system: systemPrompt,
-      tools: TOOLS,
+      tools: toolsForBusiness(args.businessId),
       messages,
     })
     usageInTokens += resp.usage?.input_tokens || 0
@@ -384,7 +451,7 @@ export async function handleInboundSms(args: {
         conversationId,
       })
       collectedToolCalls.push({ name: tu.name, args: tu.input, result })
-      if (tu.name === 'book_appointment' && (result as any)?.success === true) outcomeKind = 'booked'
+      if ((tu.name === 'book_appointment' || tu.name === 'smartride_airport_book' || tu.name === 'smartride_nonairport_book') && (result as any)?.success === true) outcomeKind = 'booked'
       if (tu.name === 'send_dispatch_request' && ((result as any)?.ok === true || (result as any)?.success === true)) {
         outcomeKind = 'dispatch'
       }
@@ -614,7 +681,7 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
       model: MODEL,
       max_tokens: 800,
       system: systemPrompt,
-      tools: TOOLS,
+      tools: toolsForBusiness(args.businessId),
       messages,
     })
     usageInTokens += resp.usage?.input_tokens || 0
@@ -644,7 +711,7 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
         conversationId,
       })
       collectedToolCalls.push({ name: tu.name, args: tu.input, result })
-      if (tu.name === 'book_appointment' && (result as any)?.success === true) {
+      if ((tu.name === 'book_appointment' || tu.name === 'smartride_airport_book' || tu.name === 'smartride_nonairport_book') && (result as any)?.success === true) {
         outcomeKind = 'booked'
         // Capture the real phone the agent collected so alerts show it instead of web-{sessionId}.
         const realPhone = (tu.input as any)?.phone
@@ -1086,6 +1153,45 @@ async function runTool(args: {
   customerPhone: string
   conversationId?: string
 }): Promise<any> {
+  // SmartRide unified API (Steve): quote/book airport + non-airport through his
+  // own server. Mirrors the voice-webhook handlers. Bag/seat counts default to 0,
+  // passengers to 1, so a booking never fails on a missing count.
+  if (args.name === 'smartride_airport_quote' || args.name === 'smartride_nonairport_quote') {
+    const { quoteAirport, quoteNonAirport } = await import('@/lib/smartride-api')
+    const a = args.args
+    const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : undefined }
+    const res = args.name === 'smartride_airport_quote'
+      ? await quoteAirport({ tripType: a.tripType || 'One Way', direction: a.direction, airport: a.airport, localAddress: String(a.localAddress || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''), returnDate: a.returnDate, returnTime: a.returnTime, passengers: num(a.passengers) ?? 1, checkedBags: num(a.checkedBags) ?? 0, carryOns: num(a.carryOns) ?? 0, carSeats: num(a.carSeats) ?? 0 })
+      : await quoteNonAirport({ serviceOption: a.serviceOption, tripType: a.tripType || 'One Way', pickup: String(a.pickup || ''), destination: String(a.destination || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''), serviceHours: num(a.serviceHours), returnDate: a.returnDate, returnTime: a.returnTime, passengers: num(a.passengers) ?? 1, checkedBags: num(a.checkedBags) ?? 0, carryOns: num(a.carryOns) ?? 0, carSeats: num(a.carSeats) ?? 0, promoCode: a.promoCode })
+    if (!res.ok) {
+      const err = res as any
+      const d = typeof err.detail === 'string' ? err.detail : String(err.detail?.error ?? err.detail?.message ?? '')
+      return { success: false, error: err.error, detail: err.detail?.error ?? err.detail, guidance: /12[\s-]?hour|in advance|notice|too soon/i.test(d) ? "Under Steve's 12-hour minimum. Don't refuse. Text that Steve usually needs about 12 hours notice, take their name and number, then send_dispatch_request (notes prefixed 'UNDER 12HR REQUEST')." : /route|fare|verify|address/i.test(d) ? "Couldn't route it, usually an incomplete address. Ask for the full pickup and destination WITH city, then quote again." : "Trouble getting the quote. Take their details and let them know Steve will follow up." }
+    }
+    const q: any = res.data
+    const avail = q.quote && q.availability?.available === true
+    return { success: true, available: avail, price: q.quote?.pricing?.total, currency: q.quote?.currency || 'USD', pickup: q.quote?.pickup, destination: q.quote?.destination, miles: q.quote?.miles, guidance: avail ? `Quote is $${q.quote?.pricing?.total}. Text the price briefly. To book, get their name, mobile, and email, then call the matching book tool with the SAME details.` : `That time isn't available. Don't say booked. Offer to send it to Steve to review, or try another time.` }
+  }
+  if (args.name === 'smartride_airport_book' || args.name === 'smartride_nonairport_book') {
+    const { bookAirport, bookNonAirport } = await import('@/lib/smartride-api')
+    const a = args.args
+    const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : undefined }
+    const sig = [a.serviceOption || a.airport, a.pickup || a.localAddress, a.destination, a.pickupDate, a.pickupTime].map((x: any) => String(x || '')).join('|')
+    let hsh = 0; for (let i = 0; i < sig.length; i++) hsh = (hsh * 31 + sig.charCodeAt(i)) >>> 0
+    const idem = `sms:${args.conversationId || args.customerPhone}:${hsh.toString(36)}`.slice(0, 200)
+    const cust = { firstName: String(a.firstName || ''), lastName: String(a.lastName || ''), phone: String(a.phone || args.customerPhone || ''), email: String(a.email || ''), notes: a.notes }
+    const res = args.name === 'smartride_airport_book'
+      ? await bookAirport({ tripType: a.tripType || 'One Way', direction: a.direction, airport: a.airport, localAddress: String(a.localAddress || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''), returnDate: a.returnDate, returnTime: a.returnTime, passengers: num(a.passengers) ?? 1, checkedBags: num(a.checkedBags) ?? 0, carryOns: num(a.carryOns) ?? 0, carSeats: num(a.carSeats) ?? 0, flightNumber: a.flightNumber, ...cust }, idem)
+      : await bookNonAirport({ serviceOption: a.serviceOption, tripType: a.tripType || 'One Way', pickup: String(a.pickup || ''), destination: String(a.destination || ''), pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''), serviceHours: num(a.serviceHours), returnDate: a.returnDate, returnTime: a.returnTime, passengers: num(a.passengers) ?? 1, checkedBags: num(a.checkedBags) ?? 0, carryOns: num(a.carryOns) ?? 0, carSeats: num(a.carSeats) ?? 0, promoCode: a.promoCode, ...cust }, idem)
+    if (!res.ok) {
+      const err = res as any
+      return { success: false, error: err.error, detail: err.detail?.error ?? err.detail, guidance: "Booking didn't go through. Do NOT say they're booked. Take their details and let them know Steve will follow up to confirm." }
+    }
+    const bk: any = res.data
+    const refs = Array.isArray(bk?.references) ? bk.references : (bk?.reference ? [bk.reference] : [])
+    return { success: true, reference: bk?.reference, references: refs, status: bk?.status, guidance: refs.length > 1 ? `Round trip, ${refs.length} references: ${refs.join(', ')}. Text ALL of them and say it's PENDING Steve's review, he'll reach out to confirm. Never say confirmed.` : `Text the reference ${bk?.reference} to the customer and say it's PENDING Steve's review, he'll reach out to confirm. Never say confirmed or booked.` }
+  }
+
   // Pure-function tools handled inline - no need for an HTTP round-trip.
   if (args.name === 'lookup_drive_time') {
     return await lookupDriveTime({
