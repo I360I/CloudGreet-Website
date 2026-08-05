@@ -1037,11 +1037,132 @@ export async function POST(request: NextRequest) {
    logger.error('smartride customer SMS failed', { error: smsErr instanceof Error ? smsErr.message : 'unknown', reference: ref })
  }
 
+ const refs = Array.isArray((bk as any)?.references) ? (bk as any).references : (ref ? [ref] : [])
  return NextResponse.json({
    success: true,
    reference: bk.reference,
+   references: refs,
    status: bk.status,
-   guidance: `Request submitted. Read the reference number "${bk.reference}" back to the caller and tell them it's PENDING Steve's confirmation - he'll reach out to confirm. Do NOT say it's confirmed or booked.`,
+   guidance: refs.length > 1
+     ? `Request submitted. This is a round trip with ${refs.length} reference numbers: ${refs.join(', ')}. Read ALL of them back to the caller and say the request is PENDING Steve's review, he'll reach out to confirm. Never say confirmed or booked.`
+     : `Request submitted. Read the reference number "${bk.reference}" back to the caller and tell them it's PENDING Steve's review - he'll reach out to confirm. Do NOT say it's confirmed or booked.`,
+ })
+ }
+ case 'smartride_nonairport_quote': {
+ // Non-airport quote via Steve's unified API (serviceType Non-Airport). Same
+ // no-price-computation rule as airport; serviceOption drives the ride type.
+ const { smartRideConfigured, quoteNonAirport } = await import('@/lib/smartride-api')
+ if (!smartRideConfigured()) {
+   return NextResponse.json({ success: false, error: 'smartride_not_configured', guidance: 'The booking system is not connected yet. Take the caller\'s info and let them know Steve will follow up.' }, { status: 503 })
+ }
+ const a = tool.arguments || {}
+ const asStr = (v: any) => v === undefined || v === null ? undefined : String(v)
+ const asNum = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : undefined }
+ const qres = await quoteNonAirport({
+   serviceOption: a.serviceOption, tripType: (a.tripType || 'One Way'),
+   pickup: String(a.pickup || ''), destination: String(a.destination || ''),
+   pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''),
+   serviceHours: asNum(a.serviceHours),
+   stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
+   stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
+   returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
+   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+   promoCode: asStr(a.promoCode), notes: asStr(a.notes),
+ })
+ if (!qres.ok) {
+   const err = qres as { ok: false; status: number; error: string; detail?: unknown }
+   const detailStr = typeof err.detail === 'string' ? err.detail : String((err.detail as any)?.error ?? (err.detail as any)?.message ?? '')
+   const under12 = /12[\s-]?hour|in advance|notice|too soon/i.test(detailStr)
+   const routeIssue = err.status === 503 || /route|fare|verify|address/i.test(detailStr)
+   return NextResponse.json({
+     success: false, error: err.error,
+     detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
+     guidance: under12
+       ? "That pickup is under Steve's 12-hour minimum for online requests. Do NOT refuse the caller. Say Steve usually needs about 12 hours notice, offer to take their details so he can see if he can fit it in, collect their name and best number, then call send_dispatch_request (notes prefixed 'UNDER 12HR REQUEST'). Then close with the transfer/callback close."
+       : routeIssue
+         ? "Steve's system couldn't route that trip, which almost always means an address is incomplete. Ask for the FULL pickup AND destination addresses including the city, then call smartride_nonairport_quote again."
+         : err.status === 400
+           ? 'Something in the trip details was off (check the service option, pickup, destination, or date/time). Ask the caller to clarify and try again.'
+           : "The booking system had trouble. Take the caller's info and tell them Steve will follow up to confirm the quote.",
+   }, { status: 200 })
+ }
+ const q = qres.data
+ const total = q.quote?.pricing?.total
+ const currency = q.quote?.currency || 'USD'
+ const available = q.availability?.available === true
+ return NextResponse.json({
+   success: true, available, price: total, currency,
+   pickup: q.quote?.pickup, destination: q.quote?.destination, miles: q.quote?.miles,
+   booking_note: q.bookingNote || null,
+   guidance: available
+     ? `Quote is $${total} ${currency}. Say the price briefly and naturally, e.g. "That's gonna be $${total}." Do NOT re-list the pickup, dropoff, date, or passenger count. If they want to book, collect their name, mobile, and email, then call smartride_nonairport_book with the SAME trip details.`
+     : `That time isn't available (${q.bookingNote || 'calendar conflict'}). Don't say it's booked. Offer to send the request to Steve to review, or suggest a different time. You can still call smartride_nonairport_book if the caller wants Steve to review it.`,
+ })
+ }
+ case 'smartride_nonairport_book': {
+ // Submit a caller-approved non-airport booking to Steve's unified API. PENDING
+ // his review - never "confirmed". Same idempotency + customer-SMS as airport.
+ const { smartRideConfigured, bookNonAirport } = await import('@/lib/smartride-api')
+ if (!smartRideConfigured()) {
+   return NextResponse.json({ success: false, error: 'smartride_not_configured', guidance: 'The booking system is not connected yet. Take the caller\'s info and let them know Steve will follow up.' }, { status: 503 })
+ }
+ const a = tool.arguments || {}
+ const asStr = (v: any) => v === undefined || v === null ? undefined : String(v)
+ const asNum = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : undefined }
+ const callId = String(body?.call?.call_id || body?.call_id || 'nocall')
+ const tripSig = [a.serviceOption, a.pickup, a.destination, a.pickupDate, a.pickupTime].map((x) => String(x || '')).join('|')
+ let h = 0; for (let i = 0; i < tripSig.length; i++) h = (h * 31 + tripSig.charCodeAt(i)) >>> 0
+ const idempotencyKey = `${callId}:na:${h.toString(36)}`.slice(0, 200)
+ const bres = await bookNonAirport({
+   serviceOption: a.serviceOption, tripType: (a.tripType || 'One Way'),
+   pickup: String(a.pickup || ''), destination: String(a.destination || ''),
+   pickupDate: String(a.pickupDate || ''), pickupTime: String(a.pickupTime || ''),
+   serviceHours: asNum(a.serviceHours),
+   stopCount: asNum(a.stopCount) as 0 | 1 | 2 | undefined,
+   stop1Address: asStr(a.stop1Address), stop2Address: asStr(a.stop2Address),
+   returnDate: asStr(a.returnDate), returnTime: asStr(a.returnTime),
+   passengers: asNum(a.passengers), checkedBags: asNum(a.checkedBags), carryOns: asNum(a.carryOns), carSeats: asNum(a.carSeats),
+   promoCode: asStr(a.promoCode), notes: asStr(a.notes),
+   firstName: String(a.firstName || ''), lastName: String(a.lastName || ''),
+   phone: String(a.phone || ''), email: String(a.email || ''),
+ }, idempotencyKey)
+ if (!bres.ok) {
+   const err = bres as { ok: false; status: number; error: string; detail?: unknown }
+   return NextResponse.json({
+     success: false, error: err.error,
+     detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
+     guidance: 'The booking request didn\'t go through. Do NOT tell the caller they\'re booked. Take their details and let them know Steve will follow up to confirm.',
+   }, { status: 200 })
+ }
+ const bk = bres.data
+ const ref = String((bk as any)?.reference || '')
+ const refs = Array.isArray((bk as any)?.references) ? (bk as any).references : (ref ? [ref] : [])
+ // customer confirmation SMS from the business's own verified line (non-blocking)
+ try {
+   let fromNum: string | null = null
+   if (resolvedBusinessId) {
+     const { data: bizSms } = await supabaseAdmin.from('businesses').select('sms_phone_number').eq('id', resolvedBusinessId).maybeSingle()
+     fromNum = ((bizSms as any)?.sms_phone_number as string) || null
+   }
+   const custPhone = normaliseE164(String(a.phone || '')) || String(a.phone || '')
+   if (fromNum && custPhone && ref) {
+     const mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+     const dp = String(a.pickupDate || '').split('-'); const tp = String(a.pickupTime || '').split(':')
+     const m = Number(dp[1]); const day = Number(dp[2]); const hh = Number(tp[0]); const mm = Number(tp[1])
+     const whenStr = (!m || !day || Number.isNaN(hh)) ? '' : ` for ${mo[m - 1]} ${day} at ${((hh + 11) % 12) + 1}:${String(mm || 0).padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`
+     const smsBody = `Smart Ride Central Ohio: we've got your ride request${whenStr}. Reference ${ref}. It's pending Steve's confirmation, he'll reach out shortly to lock it in. Reply STOP to opt out.`
+     await telnyxClient.sendSMS(custPhone, smsBody, fromNum)
+   } else {
+     logger.warn('smartride customer SMS skipped', { hasFrom: !!fromNum, hasPhone: !!custPhone, hasRef: !!ref })
+   }
+ } catch (smsErr) {
+   logger.error('smartride customer SMS failed', { error: smsErr instanceof Error ? smsErr.message : 'unknown', reference: ref })
+ }
+ return NextResponse.json({
+   success: true, reference: bk.reference, references: refs, status: bk.status,
+   guidance: refs.length > 1
+     ? `Request submitted. Round trip with ${refs.length} reference numbers: ${refs.join(', ')}. Read ALL of them back to the caller and say it's PENDING Steve's review, he'll reach out to confirm. Never say confirmed or booked.`
+     : `Request submitted. Read the reference number "${ref}" back to the caller and tell them it's PENDING Steve's review - he'll reach out to confirm. Do NOT say it's confirmed or booked.`,
  })
  }
  case 'save_customer_email': {

@@ -142,7 +142,7 @@ async function call<T>(
  * agent may still offer to submit the request for Steve's review.
  */
 export async function quoteAirport(input: SmartRideQuoteInput): Promise<SmartRideResult<SmartRideQuoteResponse>> {
-  return call<SmartRideQuoteResponse>(QUOTE_PATH(), input)
+  return call<SmartRideQuoteResponse>(QUOTE_PATH(), { serviceType: 'Airport Transportation', ...input })
 }
 
 /**
@@ -161,7 +161,57 @@ export async function bookAirport(
   if (!key) {
     return { ok: false, status: 0, error: 'missing_idempotency_key', detail: 'A stable Idempotency-Key is required for bookings.' }
   }
-  return call<SmartRideBookingResponse>(BOOK_PATH(), input, { 'Idempotency-Key': key })
+  return call<SmartRideBookingResponse>(BOOK_PATH(), { serviceType: 'Airport Transportation', ...input }, { 'Idempotency-Key': key })
+}
+
+/* --- Non-airport (unified API v2.0: same endpoints + key, serviceType switch) --- */
+
+export type SmartRideServiceOption =
+  | 'Point-to-Point Transfer' | 'Independent Living' | 'Hourly / Event Service' | 'Concert / Sporting Event'
+
+export type SmartRideNonAirportInput = {
+  serviceOption: SmartRideServiceOption
+  tripType: 'One Way' | 'Round Trip'
+  pickup: string
+  destination: string
+  pickupDate: string        // YYYY-MM-DD
+  pickupTime: string        // HH:MM 24h, America/New_York
+  serviceHours?: number     // whole number <=12, for Independent Living / Hourly-Event
+  stopCount?: 0 | 1 | 2
+  stop1Address?: string
+  stop2Address?: string
+  returnDate?: string       // round trip
+  returnTime?: string       // round trip
+  passengers?: number
+  checkedBags?: number
+  carryOns?: number
+  carSeats?: number
+  promoCode?: string
+  notes?: string
+}
+
+export type SmartRideNonAirportBookingInput = SmartRideNonAirportInput & {
+  firstName: string
+  lastName: string
+  phone: string
+  email: string
+}
+
+/** Non-airport quote (point-to-point, independent living, hourly/event, concert/sporting). */
+export async function quoteNonAirport(input: SmartRideNonAirportInput): Promise<SmartRideResult<SmartRideQuoteResponse>> {
+  return call<SmartRideQuoteResponse>(QUOTE_PATH(), { serviceType: 'Non-Airport Transportation', ...input })
+}
+
+/** Submit a caller-approved non-airport booking request. PENDING Steve's review, never "confirmed". */
+export async function bookNonAirport(
+  input: SmartRideNonAirportBookingInput,
+  idempotencyKey: string,
+): Promise<SmartRideResult<Record<string, unknown>>> {
+  const key = String(idempotencyKey || '').trim()
+  if (!key) {
+    return { ok: false, status: 0, error: 'missing_idempotency_key', detail: 'A stable Idempotency-Key is required for bookings.' }
+  }
+  return call<SmartRideBookingResponse>(BOOK_PATH(), { serviceType: 'Non-Airport Transportation', ...input }, { 'Idempotency-Key': key })
 }
 
 /* --- Response shapes (from Steve's sandbox guide, verified live) --------- */
