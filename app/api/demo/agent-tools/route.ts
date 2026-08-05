@@ -30,6 +30,7 @@ const DEMO_AGENTS: Record<string, { company: string; agentName: string; vertical
   agent_070b63dd536ee3d27d16c05a45: { company: 'Executive Transport', agentName: 'Sam', vertical: 'transport' },
   agent_c6d94b0755392d61c9c2c21e45: { company: 'Summit Roofing', agentName: 'Ava', vertical: 'roofing' },
   agent_a5136ab4471231cd16e79c29ec: { company: 'Hale & Co. Law', agentName: 'Paul', vertical: 'law' },
+  agent_9bb9882328d98793615bd9241e: { company: 'Oak & Ember', agentName: 'Nina', vertical: 'restaurant' },
 }
 
 const clean = (v: unknown, max: number) =>

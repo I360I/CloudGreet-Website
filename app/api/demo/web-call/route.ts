@@ -20,7 +20,8 @@ export const runtime = 'nodejs'
 const DEMO_AGENTS: Record<string, string> = {
   default: 'agent_1a0104f504c5b963146a6d98f3',          // Apex Air & Heat (Mia)
   hvac: 'agent_1a0104f504c5b963146a6d98f3',             // Apex Air & Heat (Mia)
-  electrical: 'agent_2800f2b423ddb542ef96a6db76',       // Bright Spark Electric (Dave)
+  electrical: 'agent_2800f2b423ddb542ef96a6db76',       // Bright Spark Electric (Dave) - off the landing, kept for cached clients
+  restaurant: 'agent_9bb9882328d98793615bd9241e',       // Oak & Ember (Nina) - fictional brand
   transport: 'agent_070b63dd536ee3d27d16c05a45',        // Executive Transport (Sam)
   carservice: 'agent_070b63dd536ee3d27d16c05a45',       // alias for transport
   roofing: 'agent_c6d94b0755392d61c9c2c21e45',          // Summit Roofing (Ava)

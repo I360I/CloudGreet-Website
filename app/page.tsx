@@ -1067,7 +1067,7 @@ function WhoItsFor() {
      Who it&apos;s for
     </p>
     <p className="font-display text-2xl sm:text-3xl md:text-[40px] font-medium tracking-tight leading-[1.3]">
-     <span className="text-gray-900">HVAC. Plumbing. Electrical. Roofing. Painting. Remodels. Car services.</span>{' '}
+     <span className="text-gray-900">Restaurants. HVAC. Plumbing. Electrical. Roofing. Painting. Car services.</span>{' '}
      <span className="text-gray-400">And just about anyone whose next job comes in over the phone.</span>
     </p>
     <p className="mt-6 text-base md:text-lg text-gray-500 max-w-xl">
