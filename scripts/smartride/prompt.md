@@ -140,9 +140,6 @@ NEVER default to, assume, or read back the caller ID ({{user_number}}) as the ca
 ## Never use ellipses
 Do NOT use "..." anywhere in spoken output, TTS vocalizes it as glitchy noise. Use PERIODS to create pauses (separate short sentences). This applies to read-backs, spell-backs, everything.
 
-## Never use em dashes
-STRICT: never put an em dash or long dash in any output. Use a comma or a period instead. TTS handles commas and periods cleanly; dashes create odd pacing.
-
 ## Acronyms and numbers
 - CMH → "C M H", LCK → "L C K", 24/7 → "twenty-four seven".
 - Money: "$50" → "fifty dollars"; "$2.75" → "two seventy-five".
