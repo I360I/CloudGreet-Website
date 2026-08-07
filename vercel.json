@@ -38,23 +38,43 @@
     },
     {
       "path": "/api/cron/email-follow-ups",
-      "schedule": "0 14,20 * * *"
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/email-follow-ups",
+      "schedule": "0 20 * * *"
     },
     {
       "path": "/api/cron/enrich-lead-emails",
-      "schedule": "0 10,22 * * *"
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/enrich-lead-emails",
+      "schedule": "0 22 * * *"
     },
     {
       "path": "/api/cron/harvest-leads",
-      "schedule": "30 13,19 * * 1-5"
+      "schedule": "30 13 * * 1-5"
+    },
+    {
+      "path": "/api/cron/harvest-leads",
+      "schedule": "30 19 * * 1-5"
     },
     {
       "path": "/api/cron/enrich-owner-names",
-      "schedule": "0 11,23 * * *"
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/enrich-owner-names",
+      "schedule": "0 23 * * *"
     },
     {
       "path": "/api/cron/verify-owner-names",
-      "schedule": "30 12,21 * * *"
+      "schedule": "30 12 * * *"
+    },
+    {
+      "path": "/api/cron/verify-owner-names",
+      "schedule": "30 21 * * *"
     },
     {
       "path": "/api/cron/save-recordings",
