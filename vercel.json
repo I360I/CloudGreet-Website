@@ -62,7 +62,7 @@
     },
     {
       "path": "/api/cron/demo-calendar-mirror",
-      "schedule": "0 * * * *"
+      "schedule": "0 13 * * *"
     }
   ]
 }
