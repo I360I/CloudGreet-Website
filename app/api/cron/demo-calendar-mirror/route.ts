@@ -15,6 +15,7 @@ export const runtime = 'nodejs'
  * self-healing via public.demo_calendar_mirrors.
  *
  * Auth: requires CRON_SECRET in production (hits Cal.com with every rep's key).
+ * (redeploy trigger)
  */
 export async function GET(request: NextRequest) {
   const denial = checkCronAuth(request)
