@@ -29,11 +29,23 @@ export async function GET(
   return NextResponse.json({ error: 'Missing call id' }, { status: 400 })
  }
 
- const { data: call } = await supabaseAdmin
+ let { data: call } = await supabaseAdmin
   .from('calls')
   .select('id, retell_call_id, recording_url')
   .eq('id', callDbId)
   .maybeSingle()
+ let table: 'calls' | 'demo_agent_calls' = 'calls'
+ if (!call) {
+  // Landing-demo calls live in demo_agent_calls (no tenant). The admin
+  // /admin/calls Demo tab feeds those ids into this same player, which
+  // used to 404 here and leave the player stuck at 0:00/0:00.
+  const { data: demo } = await supabaseAdmin
+   .from('demo_agent_calls')
+   .select('id, retell_call_id, recording_url')
+   .eq('id', callDbId)
+   .maybeSingle()
+  if (demo) { call = demo as any; table = 'demo_agent_calls' }
+ }
  if (!call) {
   return NextResponse.json({ error: 'Not found' }, { status: 404 })
  }
@@ -53,10 +65,11 @@ export async function GET(
      if (fresh && typeof fresh === 'string') {
       url = fresh
       if (fresh !== (call as any).recording_url) {
-       await supabaseAdmin
-        .from('calls')
-        .update({ recording_url: fresh, updated_at: new Date().toISOString() })
-        .eq('id', call.id)
+       // demo_agent_calls has no updated_at column
+       const patch: Record<string, string> = table === 'calls'
+        ? { recording_url: fresh, updated_at: new Date().toISOString() }
+        : { recording_url: fresh }
+       await supabaseAdmin.from(table).update(patch).eq('id', call.id)
       }
      }
     } else {
