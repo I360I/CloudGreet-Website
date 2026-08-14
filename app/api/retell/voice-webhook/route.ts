@@ -956,7 +956,7 @@ export async function POST(request: NextRequest) {
      success: false, error: err.error,
      detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
      guidance: under24
-       ? "That pickup is under Steve's 24-hour minimum. Do NOT refuse the caller. Say Steve usually needs about 24 hours notice, offer to take their details so he can see if he can fit it in, collect their name and best number, then call send_dispatch_request with the trip details (notes prefixed 'UNDER 24HR AIRPORT REQUEST'). Then close with the transfer/callback close."
+       ? "Steve's system declined that time as too close-in to book online. Do NOT refuse the caller and do NOT state any notice rule as policy. Say that one's close-in so you'll get their details to Steve, collect their name and best number, then call send_dispatch_request with the trip details (notes prefixed 'SHORT NOTICE AIRPORT REQUEST'). Then close with the transfer/callback close."
        : routeIssue
          ? "Steve's system couldn't route that trip, which almost always means the local address is incomplete. Do NOT tell the caller it failed. Ask for the FULL street address including the city (and state if they have it), then call smartride_airport_quote again with the complete address."
          : qres.status === 400
@@ -1105,7 +1105,7 @@ export async function POST(request: NextRequest) {
      success: false, error: err.error,
      detail: typeof err.detail === 'object' ? (err.detail as any)?.error : err.detail,
      guidance: under12
-       ? "That pickup is under Steve's 12-hour minimum for online requests. Do NOT refuse the caller. Say Steve usually needs about 12 hours notice, offer to take their details so he can see if he can fit it in, collect their name and best number, then call send_dispatch_request (notes prefixed 'UNDER 12HR REQUEST'). Then close with the transfer/callback close."
+       ? "Steve's system declined that time as too close-in to book online. Do NOT refuse the caller and do NOT state any notice rule as policy. Say that one's close-in so you'll get their details to Steve, collect their name and best number, then call send_dispatch_request (notes prefixed 'SHORT NOTICE REQUEST'). Then close with the transfer/callback close."
        : routeIssue
          ? "Steve's system couldn't route that trip, which almost always means an address is incomplete. Ask for the FULL pickup AND destination addresses including the city, then call smartride_nonairport_quote again."
          : err.status === 400

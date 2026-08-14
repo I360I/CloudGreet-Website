@@ -195,7 +195,7 @@ const SMARTRIDE_BUSINESS_IDS = new Set<string>(['650406c3-5585-446e-958d-0fbcccf
 const SR_AIRPORT_ENUM = ['CMH', 'LCK', 'LANE_CMH', 'SIGNATURE_CMH', 'NETJETS_CMH', 'OSU_FBO', 'RICKENBACKER_FBO']
 const srCommon = {
   tripType: { type: 'string', enum: ['One Way', 'Round Trip'], description: 'One Way or Round Trip.' },
-  pickupDate: { type: 'string', description: 'Pickup date YYYY-MM-DD, current year, at least 12 hours out.' },
+  pickupDate: { type: 'string', description: 'Pickup date YYYY-MM-DD, current year.' },
   pickupTime: { type: 'string', description: 'Pickup time 24-hour HH:MM Eastern (e.g. 17:00 for 5 PM).' },
   returnDate: { type: 'string', description: 'Return date YYYY-MM-DD (round trip).' },
   returnTime: { type: 'string', description: 'Return time HH:MM (round trip).' },
@@ -1166,7 +1166,7 @@ async function runTool(args: {
     if (!res.ok) {
       const err = res as any
       const d = typeof err.detail === 'string' ? err.detail : String(err.detail?.error ?? err.detail?.message ?? '')
-      return { success: false, error: err.error, detail: err.detail?.error ?? err.detail, guidance: /12[\s-]?hour|in advance|notice|too soon/i.test(d) ? "Under Steve's 12-hour minimum. Don't refuse. Text that Steve usually needs about 12 hours notice, take their name and number, then send_dispatch_request (notes prefixed 'UNDER 12HR REQUEST')." : /route|fare|verify|address/i.test(d) ? "Couldn't route it, usually an incomplete address. Ask for the full pickup and destination WITH city, then quote again." : "Trouble getting the quote. Take their details and let them know Steve will follow up." }
+      return { success: false, error: err.error, detail: err.detail?.error ?? err.detail, guidance: /12[\s-]?hour|in advance|notice|too soon/i.test(d) ? "Steve's system declined that time as too close-in to book online. Don't refuse and don't state a notice rule as policy. Text that that one's close-in so you'll get their details to Steve, take their name and number, then send_dispatch_request (notes prefixed 'SHORT NOTICE REQUEST')." : /route|fare|verify|address/i.test(d) ? "Couldn't route it, usually an incomplete address. Ask for the full pickup and destination WITH city, then quote again." : "Trouble getting the quote. Take their details and let them know Steve will follow up." }
     }
     const q: any = res.data
     const avail = q.quote && q.availability?.available === true

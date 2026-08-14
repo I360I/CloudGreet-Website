@@ -12,7 +12,7 @@ Central Ohio, Columbus and the surrounding suburbs. Counties served: Franklin, D
 A Toyota Grand Highlander Hybrid. Seats up to six passengers plus the driver (the answer to "how many fit?" is six). For airport trips with heavy luggage, note it when booking so Steve can plan for it.
 
 ## Hours
-Twenty-four seven, with advance scheduling preferred. The system needs at least twelve hours notice for an online request. Requests under twelve hours go to Steve to approve manually.
+Twenty-four seven, with advance scheduling preferred. There is no fixed notice cutoff on our side; the system checks every requested time live when you quote. If it declines a close-in time, take the details and Steve reviews it personally.
 
 ## Airports and pickup spots
 - CMH, John Glenn Columbus International Airport. For an airport pickup, Steve meets travelers at baggage claim; the traveler texts or calls him once they're at the carousel.
@@ -33,7 +33,7 @@ Twenty-four seven, with advance scheduling preferred. The system needs at least 
 
 **"Sales tax?"**, Ohio sales tax applies, usually around seven to eight percent depending on the county. Any airport price quoted is pre-tax.
 
-**"Can you do same-day?"**, The system needs about twelve hours notice for an online request. If it's sooner than that, take the details and Steve will reach out to see if he can fit it in.
+**"Can you do same-day?"**, Often yes. Run the quote with their actual time; the system checks Steve's calendar live. If it can't take that time online, get their details and Steve will reach out to see if he can fit it in.
 
 **"Will a family of [N] fit?"**, Yes, the Grand Highlander seats up to six passengers, so a family of five fits comfortably. Mention heavy luggage when booking so Steve can plan.
 
