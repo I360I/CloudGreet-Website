@@ -279,6 +279,7 @@ async function buildDemo(c: DemoCfg) {
     method: 'POST', headers: rh,
     body: JSON.stringify({
       agent_name: c.displayName, voice_id: mAgent.voice_id, voice_speed: mAgent.voice_speed ?? 1,
+      interruption_sensitivity: 0.2,
       ambient_sound: mAgent.ambient_sound || 'coffee-shop', language: mAgent.language || 'en-US',
       response_engine: { type: 'retell-llm', llm_id: llmRes.llm_id },
       webhook_url: 'https://cloudgreet.com/api/retell/voice-webhook',
