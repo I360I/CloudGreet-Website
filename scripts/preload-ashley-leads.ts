@@ -21,7 +21,7 @@ import { readFileSync } from 'fs'
 import { createClient } from '@supabase/supabase-js'
 const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-const ASHLEY_EMAIL = 'shleynm349@gmail.com'
+const ASHLEY_EMAIL = 'ashleynm349@gmail.com'
 const STAGED = '/private/tmp/claude-501/-Users-anthony/7673fa24-4c74-4666-9927-e3f8101e1466/scratchpad/ashley_300_ids.json'
 const INACTIVE_PREFIXES = ['8bfb0515', '5df1f86c', '481fdcfa', 'f0058412', '00347d72', '2124e384']
 
