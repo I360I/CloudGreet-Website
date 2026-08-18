@@ -58,24 +58,20 @@ export function ImpersonationBanner() {
     }
   }
 
+  // Floating pill only - no full-width bar, so the page layout (and tab
+  // transitions) are untouched. The "recorded as them" warning lives in the
+  // tooltip; the amber ring keeps the impersonation state visible at a glance.
   return (
-    <div className="sticky top-0 z-[60] bg-amber-500 text-amber-950 border-b border-amber-600 px-4 py-2">
-      <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <ShieldWarning className="w-4 h-4" />
-          You&apos;re signed in as a client account. Anything you do here is
-          recorded as them.
-        </div>
-        <button
-          type="button"
-          onClick={onReturn}
-          disabled={exiting}
-          className="inline-flex items-center gap-1.5 bg-amber-950 text-amber-50 hover:bg-black rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-        >
-          {exiting ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeft className="w-3.5 h-3.5" />}
-          {returnLabel}
-        </button>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onReturn}
+      disabled={exiting}
+      title="You're signed in as a client account. Anything you do here is recorded as them."
+      className="fixed top-4 right-4 z-[60] inline-flex items-center gap-1.5 bg-amber-950 text-amber-50 hover:bg-black rounded-full px-3.5 py-2 text-xs font-medium shadow-lg ring-2 ring-amber-500 disabled:opacity-60"
+    >
+      {exiting ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+      {returnLabel}
+      <ShieldWarning className="w-3.5 h-3.5 text-amber-400" />
+    </button>
   )
 }
