@@ -259,7 +259,10 @@ async function buildDemo(c: DemoCfg) {
   const agentRes: any = await (await fetch(`${RETELL}/create-agent`, {
     method: 'POST', headers: rh,
     body: JSON.stringify({
-      agent_name: c.displayName, voice_id: mAgent.voice_id, voice_speed: mAgent.voice_speed ?? 1,
+      agent_name: c.displayName,
+      // Owner defaults (2026-08-18): Jack John custom voice + ElevenLabs v3
+      voice_id: 'custom_voice_d7e2825972e0d4be3afb8d0496', voice_model: 'eleven_v3',
+      voice_speed: mAgent.voice_speed ?? 1,
       interruption_sensitivity: 0.2,
       ambient_sound: mAgent.ambient_sound || 'coffee-shop', language: mAgent.language || 'en-US',
       response_engine: { type: 'retell-llm', llm_id: llmRes.llm_id },
