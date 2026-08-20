@@ -1,0 +1,17 @@
+# Runs the demo-calendar-mirror sync every 15 minutes by calling the
+# production endpoint. Lives here because Vercel's Hobby plan only allows
+# once-daily crons (the hard-won lesson of Aug 2026); GitHub Actions has
+# no such limit. Needs the CRON_SECRET repo secret.
+name: demo-calendar-mirror
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call mirror endpoint
+        run: |
+          curl -sf -m 60 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://cloudgreet.com/api/cron/demo-calendar-mirror"
