@@ -13,10 +13,9 @@ export const runtime = 'nodejs'
  * Advances the rep one step. Body: { complete_step: number }.
  * - Only allows completing the rep's current step (no skipping ahead).
  * - Step 3 (Stripe Connect) is rejected unless stripe_connect_payouts_enabled.
- * - Step 7 (quiz) goes through /api/sales/onboarding/quiz instead.
  * - On step 1 transition, stamps onboarding_started_at.
- * - Reaching step 7 stays at step 7 until the quiz passes; the quiz
- *   endpoint sets onboarding_completed_at.
+ * - Completing the final step stamps onboarding_completed_at (the old
+ *   step-7 quiz is gone - owner call, 2026-08-19).
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -52,11 +51,6 @@ export async function POST(request: NextRequest) {
         error: 'Finish Stripe Connect before continuing - payouts must be enabled.',
       }, { status: 409 })
     }
-    if (stepDef.kind === 'quiz') {
-      return NextResponse.json({
-        error: 'Submit the quiz via /api/sales/onboarding/quiz',
-      }, { status: 409 })
-    }
 
     const nextStep = Math.min(completeStep + 1, ONBOARDING_STEPS.length)
     const nowIso = new Date().toISOString()
@@ -66,6 +60,9 @@ export async function POST(request: NextRequest) {
     }
     if (!(rep as any)?.onboarding_started_at) {
       update.onboarding_started_at = nowIso
+    }
+    if (completeStep === ONBOARDING_STEPS.length) {
+      update.onboarding_completed_at = nowIso
     }
 
     // Upsert so a missing sales_reps row doesn't silently no-op the

@@ -5,7 +5,6 @@ import { CircleNotch, Lock, CheckCircle, PlayCircle, WarningCircle, ArrowRight, 
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { ONBOARDING_STEPS, type OnboardingStep } from '@/lib/sales/onboarding-steps'
-import { QUIZ, QUIZ_PASS_THRESHOLD, type QuizQuestion } from '@/lib/sales/onboarding-quiz'
 
 /**
  * Async rep onboarding - 7 sequential gated steps.
@@ -126,7 +125,7 @@ export default function RepOnboardingPage() {
         <SalesPageHeader eyebrow="onboarding" title="Get ready to sell" />
 
         <p className="text-sm text-gray-600 mb-6 max-w-xl">
-          Watch each video, mark it complete, and pass the quiz to unlock the full dashboard. Self-paced - resume any time.
+          Watch each video and mark it complete. Self-paced - resume any time.
         </p>
 
         {/* Progress bar */}
@@ -149,7 +148,7 @@ export default function RepOnboardingPage() {
             <div>
               <p className="text-sm font-medium text-emerald-900">Onboarding complete - you&apos;re live.</p>
               <p className="text-xs text-emerald-800 mt-1">
-                Quiz passed at {state.last_quiz_score ?? 0}%. Lead scraper and payment links are unlocked.
+                All steps complete. Go book some demos.
               </p>
             </div>
           </div>
@@ -178,13 +177,9 @@ export default function RepOnboardingPage() {
                 isOpen={openStep === step.number}
                 onToggle={() => setOpenStep((cur) => (cur === step.number ? null : step.number))}
                 stripePayoutsEnabled={state.stripe_payouts_enabled}
-                quizPassed={!!state.quiz_passed_at}
-                quizAttempts={state.quiz_attempts}
-                lastQuizScore={state.last_quiz_score}
                 busy={busy === step.number}
                 onMarkComplete={() => advance(step.number)}
                 onStartStripe={startStripeConnect}
-                onQuizDone={reload}
               />
             )
           })}
@@ -196,21 +191,17 @@ export default function RepOnboardingPage() {
 
 function StepCard({
   step, status, isOpen, onToggle,
-  stripePayoutsEnabled, quizPassed, quizAttempts, lastQuizScore,
-  busy, onMarkComplete, onStartStripe, onQuizDone,
+  stripePayoutsEnabled,
+  busy, onMarkComplete, onStartStripe,
 }: {
   step: OnboardingStep
   status: 'done' | 'current' | 'locked'
   isOpen: boolean
   onToggle: () => void
   stripePayoutsEnabled: boolean
-  quizPassed: boolean
-  quizAttempts: number
-  lastQuizScore: number | null
   busy: boolean
   onMarkComplete: () => void
   onStartStripe: () => void
-  onQuizDone: () => void
 }) {
   const locked = status === 'locked'
   const done = status === 'done'
@@ -279,13 +270,6 @@ function StepCard({
               busy={busy}
               onStart={onStartStripe}
               onMarkComplete={onMarkComplete}
-            />
-          ) : step.kind === 'quiz' ? (
-            <QuizSection
-              passed={quizPassed}
-              attempts={quizAttempts}
-              lastScore={lastQuizScore}
-              onDone={onQuizDone}
             />
           ) : (
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -358,166 +342,7 @@ function StripeConnectAction({
   )
 }
 
-function QuizSection({
-  passed, attempts, lastScore, onDone,
-}: {
-  passed: boolean; attempts: number; lastScore: number | null; onDone: () => void
-}) {
-  const [answers, setAnswers] = useState<Record<string, number>>({})
-  const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<{
-    passed: boolean; scorePct: number;
-    graded: { id: string; correct: boolean; videoStep: number }[]
-  } | null>(null)
 
-  const allAnswered = useMemo(
-    () => QUIZ.every((q) => typeof answers[q.id] === 'number'),
-    [answers],
-  )
-
-  if (passed && !result) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-emerald-700">
-        <CheckCircle className="w-4 h-4" />
-        Quiz passed{lastScore !== null ? ` (${lastScore}%)` : ''}. The full dashboard is unlocked.
-      </div>
-    )
-  }
-
-  const submit = async () => {
-    setSubmitting(true)
-    try {
-      const r = await fetchWithAuth('/api/sales/onboarding/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
-      })
-      const j = await r.json().catch(() => ({}))
-      if (j?.success) {
-        setResult({ passed: j.passed, scorePct: j.scorePct, graded: j.graded || [] })
-        onDone()
-      }
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const reset = () => { setAnswers({}); setResult(null) }
-
-  return (
-    <div className="space-y-5">
-      {attempts > 0 && !result && (
-        <div className="text-xs text-gray-500">
-          Previous attempts: {attempts}{lastScore !== null ? ` · last score ${lastScore}%` : ''}
-        </div>
-      )}
-
-      {result && (
-        <div className={`rounded-xl border p-4 ${result.passed
-          ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-          : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
-          <div className="text-sm font-medium">
-            {result.passed
-              ? `Passed - ${result.scorePct}%. The dashboard is fully unlocked.`
-              : `Score: ${result.scorePct}% (need ${Math.round(QUIZ_PASS_THRESHOLD * 100)}% to pass).`}
-          </div>
-          {!result.passed && (
-            <div className="text-xs mt-1">
-              Review steps {Array.from(new Set(result.graded.filter((g) => !g.correct).map((g) => g.videoStep))).join(', ')} and try again.
-            </div>
-          )}
-        </div>
-      )}
-
-      <ol className="space-y-4">
-        {QUIZ.map((q, idx) => {
-          const grade = result?.graded.find((g) => g.id === q.id)
-          return (
-            <QuizItem
-              key={q.id}
-              q={q}
-              idx={idx}
-              picked={answers[q.id]}
-              correctIdx={result ? q.answer : undefined}
-              isCorrect={grade?.correct}
-              disabled={!!result}
-              onPick={(i) => setAnswers((a) => ({ ...a, [q.id]: i }))}
-            />
-          )
-        })}
-      </ol>
-
-      <div className="flex items-center justify-end gap-3">
-        {result ? (
-          <button
-            type="button"
-            onClick={reset}
-            className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            {result.passed ? 'Done' : 'Retake'}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!allAnswered || submitting}
-            className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {submitting ? <CircleNotch className="w-4 h-4 animate-spin" /> : null}
-            Submit quiz
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function QuizItem({
-  q, idx, picked, correctIdx, isCorrect, disabled, onPick,
-}: {
-  q: QuizQuestion; idx: number; picked: number | undefined
-  correctIdx: number | undefined; isCorrect: boolean | undefined
-  disabled: boolean; onPick: (i: number) => void
-}) {
-  return (
-    <li className="bg-gray-50/60 border border-gray-200 rounded-xl p-4">
-      <div className="text-sm font-medium text-gray-900 mb-3">
-        <span className="text-gray-400 font-mono mr-2">{String(idx + 1).padStart(2, '0')}.</span>
-        {q.prompt}
-      </div>
-      <div className="space-y-1.5">
-        {q.options.map((opt, i) => {
-          const checked = picked === i
-          const showCorrect = correctIdx === i
-          const showWrongPick = disabled && checked && !isCorrect
-          return (
-            <label
-              key={i}
-              className={`flex items-start gap-3 rounded-lg border px-3 py-2 cursor-pointer text-sm transition-colors ${
-                disabled ? 'cursor-not-allowed' : 'hover:border-gray-400'
-              } ${
-                showCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                : showWrongPick ? 'bg-rose-50 border-rose-200 text-rose-900'
-                : checked ? 'bg-white border-gray-900' : 'bg-white border-gray-200'
-              }`}
-            >
-              <input
-                type="radio"
-                name={q.id}
-                value={i}
-                checked={checked}
-                disabled={disabled}
-                onChange={() => onPick(i)}
-                className="mt-1"
-              />
-              <span>{opt}</span>
-            </label>
-          )
-        })}
-      </div>
-    </li>
-  )
-}
 
 function VideoEmbed({ url }: { url: string }) {
   if (!url) {

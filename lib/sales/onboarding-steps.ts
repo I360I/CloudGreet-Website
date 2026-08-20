@@ -24,7 +24,6 @@ export type StepKey =
   | 'dashboard-walkthrough'
   | 'sales-pitch'
   | 'demo-flow'
-  | 'quiz'
 
 export type OnboardingStep = {
   key: StepKey
@@ -37,10 +36,9 @@ export type OnboardingStep = {
   outline: string[]
   /**
    * Step 3 ('stripe-connect') is gated by Stripe Connect payouts being
-   * enabled. Step 7 ('quiz') replaces the normal "mark complete" with
-   * a quiz UI. Other steps are simple watch + click.
+   * enabled. Other steps are simple watch + click.
    */
-  kind: 'standard' | 'stripe-connect' | 'quiz'
+  kind: 'standard' | 'stripe-connect'
 }
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
@@ -154,21 +152,6 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       'On a no: ask why, learn, move on',
       'After the close, send the customization form. The platform handles the rest.',
       'Your job ends at form submission. We build, polish, and run the go-live call.',
-    ],
-  },
-  {
-    key: 'quiz',
-    number: 7,
-    title: 'Knowledge quiz',
-    goal: 'Pass at 80% to unlock the full dashboard.',
-    durationLabel: '~10 min',
-    videoUrl: '',
-    kind: 'quiz',
-    outline: [
-      '10 multiple-choice questions covering steps 1-6',
-      'No time limit, unlimited retakes',
-      'Pass threshold: 80% (8 of 10)',
-      'Failed questions are flagged so you can rewatch the relevant video',
     ],
   },
 ]
