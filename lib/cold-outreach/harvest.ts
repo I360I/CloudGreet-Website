@@ -1,3 +1,4 @@
+import { scoreLead } from '@/lib/lead-ops/scoring'
 import { supabaseAdmin } from '@/lib/supabase'
 import { discoverPlaces } from '@/lib/scrapers/google-places'
 import { normalizePhone } from '@/lib/scrapers/normalize'
@@ -54,6 +55,17 @@ export async function processHarvestTargets(limit = 6): Promise<HarvestRunResult
         const phone = normalizePhone(place.phone)
         if (!phone) continue // no phone = can't dedupe or ever call; skip
 
+        // Lead Quality System gate (2026-08-20): tier at the door. Franchises,
+        // closed listings and junk never enter the pool - the old harvest
+        // stored everything and 82% of the pool ended up undialable.
+        const scored = scoreLead({
+          business_name: place.business_name, business_type: t.category,
+          phone, state: place.state || t.state,
+          google_rating: place.rating, google_review_count: place.review_count,
+          google_business_status: place.business_status,
+        })
+        if (scored.tier === 'excluded') continue
+
         // leads.phone is globally unique - ignoreDuplicates makes this
         // an insert-if-new against every lead we've ever touched.
         const { data: inserted, error } = await supabaseAdmin
@@ -74,6 +86,9 @@ export async function processHarvestTargets(limit = 6): Promise<HarvestRunResult
             google_business_status: place.business_status,
             source: 'harvest',
             status: 'cold',
+            lead_tier: scored.tier,
+            lead_score: scored.score,
+            scored_at: new Date().toISOString(),
             // email left NULL so the enrich-lead-emails cron picks it up
           }, { onConflict: 'phone', ignoreDuplicates: true })
           .select('id')

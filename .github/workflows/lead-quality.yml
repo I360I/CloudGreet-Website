@@ -1,0 +1,22 @@
+# Lead Quality System: nightly re-tier of the whole pool + queue-standards
+# enforcement for active dialers. Scoring source of truth:
+# lib/lead-ops/scoring.ts. Runs here because Vercel Hobby crons are
+# once-daily-only and slots are at the cap.
+name: lead-quality
+on:
+  schedule:
+    - cron: "0 9 * * *"   # 4am CT nightly
+  workflow_dispatch: {}
+jobs:
+  rescore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci --ignore-scripts
+      - name: Rescore + enforce queues
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/rescore-leads.mts
