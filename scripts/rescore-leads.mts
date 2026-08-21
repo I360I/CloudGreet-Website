@@ -18,7 +18,10 @@ const sb = createClient(
 // Active dialers whose queues get standards enforcement.
 const ACTIVE_DIALERS: Record<string, string> = {
   '4fcaa417-21f9-4df8-8f5f-18c6fcf42bd1': 'Masen',
+  // Craig Markowski + Albert Sanft (resolved at runtime by email below);
+  // add Randall's id when his invite is accepted.
 }
+const DIALER_EMAILS = ['cmarkowski2003@yahoo.com', 'avsanft@outlook.com', 'randall.berry.b2b@gmail.com']
 
 async function main() {
   // 1) rescore the whole pool (paginated - Supabase caps selects at 1000)
@@ -46,7 +49,10 @@ async function main() {
   console.log(`rescored ${all.length} leads (${changed} changed):`, JSON.stringify(counts))
 
   // 2) enforce queue standards for each active dialer
-  for (const [repId, name] of Object.entries(ACTIVE_DIALERS)) {
+  const dialers: Record<string, string> = { ...ACTIVE_DIALERS }
+  const { data: extra } = await sb.from('custom_users').select('id, first_name, email').in('email', DIALER_EMAILS)
+  for (const u of extra || []) dialers[u.id] = u.first_name || u.email
+  for (const [repId, name] of Object.entries(dialers)) {
     const { data: asg } = await sb.from('lead_assignments').select('lead_id,status,disposition').eq('rep_id', repId)
     const ids = (asg || []).map((a) => a.lead_id)
     const leads: any[] = []

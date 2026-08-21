@@ -69,6 +69,8 @@ export function scoreLead(l: ScorableLead): { tier: LeadTier; score: number } {
   score += Math.min(25, Math.round(reviews / 8)) // volume proxy (capped)
   if (rating !== null && rating >= 3.3 && rating <= 4.4) score += 40 // the pain band
   if (rating !== null && rating >= 4.5) score -= 40                  // polished = low pain
+  if (/AFTER-HOURS GAP/.test(notes)) score += 30 // closes 5pm = evening calls die (mined signal)
+  if (/STALE: newest review/.test(notes)) score -= 30 // no recent reviews = possibly dormant
 
   // ---- tiers (first match wins) ----
   const hasCleanNumber =
